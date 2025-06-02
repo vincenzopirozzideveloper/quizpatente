@@ -5,7 +5,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.2+-blue.svg)](https://php.net)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Portale web completo per l'apprendimento e la preparazione agli esami teorici della patente di guida, costruito con Laravel 11 e Filament v3.
+Portale web completo per l'apprenadimento e la preparazione agli esami teorici della patente di guida, costruito con Laravel 12 e Filament v3.
 
 ## 📋 Panoramica
 
