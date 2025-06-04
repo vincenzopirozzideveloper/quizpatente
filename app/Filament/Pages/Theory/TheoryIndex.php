@@ -11,7 +11,7 @@ class TheoryIndex extends Page
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Teoria';
     protected static ?string $title = 'Teoria';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
     protected static ?string $navigationGroup = 'Area Studio';
     protected static string $view = 'filament.pages.theory.theory-index';
 

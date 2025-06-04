@@ -10,7 +10,7 @@ class ReviewErrors extends Page
     protected static ?string $navigationIcon = 'heroicon-o-x-circle';
     protected static ?string $navigationLabel = 'Ripassa errori';
     protected static ?string $title = 'Ripassa errori';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 4;
     protected static ?string $navigationGroup = 'Area Studio';
     protected static string $view = 'filament.pages.errors.review-errors';
 
