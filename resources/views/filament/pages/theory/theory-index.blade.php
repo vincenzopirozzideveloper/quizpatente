@@ -2,7 +2,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @foreach($topics as $topic)
             <x-filament::card>
-                <a href="{{ route('filament.pages.theory.view', $topic['id']) }}" 
+                <a href="{{ route('filament.quizpatente.pages.theory-view', ['topicId' => $topic['id']]) }}" 
                    class="block hover:no-underline">
                     <div class="flex items-start space-x-3">
                         <div class="flex-shrink-0 w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center text-2xl">

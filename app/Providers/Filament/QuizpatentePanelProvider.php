@@ -7,8 +7,10 @@ use Filament\Panel;
 use Filament\Widgets;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Navigation\NavigationItem;
 use Filament\Navigation\NavigationGroup;
 use Filament\Http\Middleware\Authenticate;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -30,6 +32,7 @@ class QuizpatentePanelProvider extends PanelProvider
             ->login()
             ->registration()
             ->passwordReset()
+            ->emailVerification()
             ->colors([
                 'primary' => Color::Orange,
                 'gray' => Color::Gray,
@@ -42,22 +45,37 @@ class QuizpatentePanelProvider extends PanelProvider
                 NavigationGroup::make('Account')
                     ->icon('heroicon-o-user-circle')
                     ->collapsed(),
-            ])     
+            ]) 
+            ->navigationItems([
+                NavigationItem::make('Profilo')
+                    ->group('Account')
+                    ->sort(0)
+                    ->icon('heroicon-o-user')
+                    ->url(fn () => route('filament.quizpatente.pages.profilo')) // <-- dinamico
+                    ->isActiveWhen(fn () => request()->routeIs('filament.quizpatente.pages.profile')),
+            ])    
             ->sidebarCollapsibleOnDesktop()
             ->maxContentWidth('full')
             ->spa()
-            ->pages([
-                Pages\Dashboard::class,
-            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ])
-            
+            ->plugin(
+                BreezyCore::make()
+                    ->myProfile(
+                        shouldRegisterUserMenu: true,
+                        shouldRegisterNavigation: false,
+                        hasAvatars: true,
+                        slug: 'profilo'
+                    )
+                    ->enableTwoFactorAuthentication(
+                        force: false
+                    )
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

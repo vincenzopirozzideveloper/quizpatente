@@ -5,24 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class TheoryContent extends Model
+class Subtopic extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'topic_id',
-        'subtopic_id',
         'code',
-        'content',
-        'media',
+        'title',
+        'description',
         'order',
-        'is_published',
+        'is_active',
     ];
 
     protected $casts = [
-        'is_published' => 'boolean',
-        'media' => 'array',
+        'is_active' => 'boolean',
         'order' => 'integer',
     ];
 
@@ -31,14 +30,14 @@ class TheoryContent extends Model
         return $this->belongsTo(Topic::class);
     }
 
-    public function subtopic(): BelongsTo
+    public function theoryContents(): HasMany
     {
-        return $this->belongsTo(Subtopic::class);
+        return $this->hasMany(TheoryContent::class)->orderBy('order');
     }
 
-    public function scopePublished($query)
+    public function scopeActive($query)
     {
-        return $query->where('is_published', true);
+        return $query->where('is_active', true);
     }
 
     public function scopeOrdered($query)

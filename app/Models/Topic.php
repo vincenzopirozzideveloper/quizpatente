@@ -66,9 +66,15 @@ class Topic extends Model
 
     public function getCompletionPercentageAttribute(): float
     {
-        if ($this->total_questions === 0) return 0;
-        
+        if ($this->total_questions === 0)
+            return 0;
+
         $completed = $this->userProgress?->completed_questions ?? 0;
         return round(($completed / $this->total_questions) * 100, 1);
+    }
+
+    public function subtopics(): HasMany
+    {
+        return $this->hasMany(Subtopic::class)->orderBy('order');
     }
 }
