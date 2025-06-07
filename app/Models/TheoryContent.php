@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TheoryContent extends Model
 {
@@ -47,5 +49,14 @@ class TheoryContent extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('order')->orderBy('code');
+    }
+    public function userProgress(): HasMany
+    {
+        return $this->hasMany(UserTheoryProgress::class, 'theory_content_id');
+    }
+
+    public function currentUserProgress(): HasOne
+    {
+        return $this->hasOne(UserTheoryProgress::class, 'theory_content_id')->where('user_id', auth()->id());
     }
 }

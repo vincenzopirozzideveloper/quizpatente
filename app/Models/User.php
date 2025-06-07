@@ -68,4 +68,8 @@ class User extends Authenticatable implements HasAvatar
     {
         return $this->settings()->first() ?? UserSetting::getForUser($this->id);
     }
+    public function theoryProgress(): HasMany
+    {
+        return $this->hasMany(UserTheoryProgress::class);
+    }
 }
