@@ -18,6 +18,9 @@ class TheoryContent extends Model
         'media',
         'order',
         'is_published',
+        'image_url',
+        'image_caption',
+        'image_position',
     ];
 
     protected $casts = [

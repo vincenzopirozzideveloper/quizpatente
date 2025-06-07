@@ -1,11 +1,36 @@
 .
 ├── albero_directory.txt
 ├── app
+│   ├── Filament
+│   │   └── Pages
+│   │       ├── Account
+│   │       │   └── Settings.php
+│   │       ├── Dashboard.php
+│   │       ├── Errors
+│   │       │   └── ReviewErrors.php
+│   │       ├── Progress
+│   │       │   └── MyProgress.php
+│   │       ├── Quiz
+│   │       │   └── QuizIndex.php
+│   │       └── Theory
+│   │           ├── TheoryIndex.php
+│   │           └── TheoryView.php
 │   ├── Http
 │   │   └── Controllers
 │   │       └── Controller.php
 │   ├── Models
-│   │   └── User.php
+│   │   ├── Category.php
+│   │   ├── Question.php
+│   │   ├── QuizAnswer.php
+│   │   ├── QuizSession.php
+│   │   ├── Subtopic.php
+│   │   ├── TheoryContent.php
+│   │   ├── Topic.php
+│   │   ├── UserError.php
+│   │   ├── User.php
+│   │   ├── UserSetting.php
+│   │   ├── UserTopicProgress.php
+│   │   └── VideoExplanation.php
 │   └── Providers
 │       ├── AppServiceProvider.php
 │       └── Filament
@@ -14,6 +39,8 @@
 ├── bootstrap
 │   ├── app.php
 │   ├── cache
+│   │   ├── filament
+│   │   │   └── panels
 │   │   ├── packages.php
 │   │   └── services.php
 │   └── providers.php
@@ -78,93 +105,36 @@
 ├── resources
 │   ├── css
 │   │   └── app.css
-│   ├── js
-│   │   ├── app.js
-│   │   └── bootstrap.js
-│   └── views
-│       └── welcome.blade.php
+│   └── js
+│       ├── app.js
+│       └── bootstrap.js
 ├── routes
 │   ├── console.php
 │   └── web.php
 ├── storage
 │   ├── app
 │   │   ├── private
+│   │   │   └── livewire-tmp
 │   │   └── public
+│   │       ├── 01JWWTF66BW9HGJZBEZRNAH75J.jpg
+│   │       ├── 01JWWTH94E3BT2VM9YRAPQZFX4.jpg
+│   │       ├── 01JWWTY6JAPHA5HZTA81PQ0KAC.jpg
+│   │       ├── 01JX0Z1PBNA8DFJYHFQTT7QTKY.jpg
+│   │       ├── 01JX0Z2KCF4DGW6QXA9KJ6EZMB.jpg
+│   │       ├── 01JX0ZCYDPPKCNYS0K31HKGNDA.jpg
+│   │       ├── 01JX0ZF1SBFDS9QRCMQWG9KX1G.png
+│   │       ├── 01JX0ZMDW2G49VYKRNDMZNKFT2.png
+│   │       ├── 01JX0ZPBXFF36FKK2D20F69AYZ.png
+│   │       ├── 01JX0ZQXYEKE8A9G1HC4GPG8AA.jpg
+│   │       └── 01JX4XDDMNJ6YR9SN1P7T0E8XG.jpg
 │   ├── framework
 │   │   ├── cache
-│   │   │   └── data
+│   │   │   ├── data
+│   │   │   └── facade-1e06026dbe325cba543b2306bd7e55d66d31e4c1.php
 │   │   ├── sessions
-│   │   ├── testing
-│   │   └── views
-│   │       ├── 0098f0bb6542ecea71eddadfb2ae962f.php
-│   │       ├── 0982e2ed3224807c8d84cf36ab2ba4c6.php
-│   │       ├── 0e99ebddfff6c84ce16496847948e432.php
-│   │       ├── 1050a4f04dd72af938dffb7467c8c821.php
-│   │       ├── 126b2f7c1b214ed850bb051d9da3d233.php
-│   │       ├── 12a7f9f444adbfcf76836890a1efa8f3.php
-│   │       ├── 13d324f196df231ac05becaf205e7ad1.php
-│   │       ├── 140673237b098c4072dff550ed3324bf.php
-│   │       ├── 18d0ebe9516a1bef66475c2352af08ca.php
-│   │       ├── 198095369c22c58de49995bc8a5b2997.php
-│   │       ├── 1d99a7e4df9cb78eeaf464df03e7012b.blade.php
-│   │       ├── 20bfdfa25e74587f29e8c072b66998a0.php
-│   │       ├── 227324295fa46aa78ebf822221e4998b.php
-│   │       ├── 244c121feaa8cdc01d2611ddf1593b38.php
-│   │       ├── 2cfb337d2fd6859b8477bcebb47bc0d2.php
-│   │       ├── 2eca9bb94bf76d0c38d552ea684de06c.php
-│   │       ├── 30a368704cedf6b27371664377573a9f.php
-│   │       ├── 3494ebede7bc9f195851603db4c5eef2.php
-│   │       ├── 3a26fe635e01485a7e4f640b38592db4.php
-│   │       ├── 4941ed1c64f319c1a57a6a44503c4cf0.php
-│   │       ├── 4943bc92ebba41e8b0e508149542e0ad.blade.php
-│   │       ├── 53704b54249251b190092c0f42ee6ead.php
-│   │       ├── 557f112bcfd40ff4ed71d8a0603209da.blade.php
-│   │       ├── 5ac4760e7b0997c2e3980a687bada355.php
-│   │       ├── 5d01ac4e7640938026d676bea8f822b9.php
-│   │       ├── 5f4bc260f96b11202785a095ba523ebe.php
-│   │       ├── 5faa81e3809d28ed9e32f1d20c313fc2.php
-│   │       ├── 63a21279554928919779ab3570660030.php
-│   │       ├── 64e5ab51b52a67a0eb536ed24c8ecb88.php
-│   │       ├── 669b17e97dcde719a7c36a1a329be67c.php
-│   │       ├── 714c2d9c45489bf315479c306d636077.php
-│   │       ├── 73e10ea484c39e70836f2144931d0a34.php
-│   │       ├── 794eddd4307a0d35ad6c673c9c32c71d.php
-│   │       ├── 8906c4225f9b1d576ddbbeb68c3ff7d2.php
-│   │       ├── 9177d131d0ca6ab745404955aec0f4a9.php
-│   │       ├── 94bc387bea57de6fedfce1c7eb224985.php
-│   │       ├── 9b0aa906eb507785d5e713f2ff316d37.blade.php
-│   │       ├── a0e531b8507a179452c42ffea519d2e2.php
-│   │       ├── a2e39ccd359c0ad7794616509be873b0.php
-│   │       ├── a8d538be64fd3b8e7a193e122265c518.php
-│   │       ├── b0c125add6d1b030f49a2a9966fd8d22.php
-│   │       ├── b38dba7fed8f411fa1f65bb101026c00.php
-│   │       ├── b3fea7b79a291f72028b3ade68edbac3.blade.php
-│   │       ├── b5d1b5586b22d22b11ea2e8acd628de2.php
-│   │       ├── b941aea74d689631d6becedf01868b61.php
-│   │       ├── ba3665909391ee220f68bf5cbc2afd77.php
-│   │       ├── bd5ac4860f8ec78d2bfa1b22d33ef75d.php
-│   │       ├── bf252dc2a8d395444c812cad9f48aeda.php
-│   │       ├── c7e6ed2e5158dd4efbd977628ad452a8.php
-│   │       ├── cdbb521556ec939e7446ef3cebe46c56.php
-│   │       ├── cea60d4c430c74336422771b22c2202e.php
-│   │       ├── cfa33a9a72bd1ba9b30aa62ccf5a4f47.php
-│   │       ├── d4d130e5ae0bbdf2f52debce4bbc5a3d.php
-│   │       ├── d70fe316aa2b3eee03aff0d7a2aaacab.php
-│   │       ├── d81b61d975f90fa9e43f17062793421d.php
-│   │       ├── d8d120137f4ba6c350e42260810203cc.php
-│   │       ├── dbbbcf0a075c69447cdb086a36eb7f73.php
-│   │       ├── dc02a2bede79296c5101f8e6499cbf87.php
-│   │       ├── df5d8c26b1fd4ecd22aeee145299adc3.blade.php
-│   │       ├── e1248457b41e223817458948726400b4.php
-│   │       ├── e5822cb29d0b3acf94d7da5ee4546475.php
-│   │       ├── e660e835ecde4d128b50fa78f8b3e987.php
-│   │       ├── eb6cf9f7707a31e729a58469a481cc5e.php
-│   │       ├── ee44f765519a5f45e79edc4ddf627ba3.php
-│   │       ├── f54c05444929c6c40cf15b979128bb4b.php
-│   │       ├── f8c741736140fe8b4bc2613616454730.php
-│   │       ├── f9ff3aec7000b1a2949f443ec760b595.php
-│   │       └── faff6717fce4147bbb29a1815622bd88.php
+│   │   └── testing
 │   └── logs
+│       └── laravel.log
 ├── tests
 │   ├── Feature
 │   │   └── ExampleTest.php
@@ -173,4 +143,4 @@
 │       └── ExampleTest.php
 └── vite.config.js
 
-48 directories, 126 files
+56 directories, 88 files

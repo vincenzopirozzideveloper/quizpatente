@@ -42,18 +42,21 @@ class QuizpatentePanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Area Studio')
                     ->icon('heroicon-o-academic-cap'),
+                NavigationGroup::make('Gestione Contenuti')
+                    ->icon('heroicon-o-cog')
+                    ->collapsed(),
                 NavigationGroup::make('Account')
                     ->icon('heroicon-o-user-circle')
                     ->collapsed(),
-            ]) 
+            ])
             ->navigationItems([
                 NavigationItem::make('Profilo')
                     ->group('Account')
                     ->sort(0)
                     ->icon('heroicon-o-user')
-                    ->url(fn () => route('filament.quizpatente.pages.profilo')) // <-- dinamico
-                    ->isActiveWhen(fn () => request()->routeIs('filament.quizpatente.pages.profile')),
-            ])    
+                    ->url(fn() => route('filament.quizpatente.pages.profilo')) // <-- dinamico
+                    ->isActiveWhen(fn() => request()->routeIs('filament.quizpatente.pages.profile')),
+            ])
             ->sidebarCollapsibleOnDesktop()
             ->maxContentWidth('full')
             ->spa()
