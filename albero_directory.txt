@@ -51,6 +51,7 @@
 │   │   ├── UserError.php
 │   │   ├── User.php
 │   │   ├── UserSetting.php
+│   │   ├── UserTheoryProgress.php
 │   │   ├── UserTopicProgress.php
 │   │   └── VideoExplanation.php
 │   └── Providers
@@ -167,4 +168,4 @@
 │       └── ExampleTest.php
 └── vite.config.js
 
-66 directories, 102 files
+66 directories, 103 files
