@@ -13,7 +13,6 @@ class Topic extends Model
     use HasFactory;
 
     protected $fillable = [
-        'category_id',
         'code',
         'name',
         'description',
@@ -28,11 +27,6 @@ class Topic extends Model
         'order' => 'integer',
         'total_questions' => 'integer',
     ];
-
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
 
     public function questions(): HasMany
     {

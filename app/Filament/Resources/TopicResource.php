@@ -33,13 +33,7 @@ class TopicResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make()
-                    ->schema([
-                        Forms\Components\Select::make('category_id')
-                            ->label('Categoria')
-                            ->options(Category::query()->pluck('name', 'id'))
-                            ->searchable()
-                            ->preload(),
-                            
+                    ->schema([                            
                         Forms\Components\TextInput::make('code')
                             ->label('Codice')
                             ->required()
@@ -121,13 +115,6 @@ class TopicResource extends Resource
                     ->sortable()
                     ->description(fn (Topic $record): string => $record->description ?? ''),
                     
-                Tables\Columns\TextColumn::make('category.name')
-                    ->label('Categoria')
-                    ->badge()
-                    ->color('primary')
-                    ->searchable()
-                    ->sortable(),
-                    
                 Tables\Columns\TextColumn::make('subtopics_count')
                     ->label('Sottoargomenti')
                     ->counts('subtopics')
@@ -149,11 +136,6 @@ class TopicResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('category_id')
-                    ->label('Categoria')
-                    ->options(Category::query()->pluck('name', 'id'))
-                    ->searchable()
-                    ->preload(),
                     
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Stato')

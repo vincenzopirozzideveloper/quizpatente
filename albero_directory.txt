@@ -2,24 +2,46 @@
 ├── albero_directory.txt
 ├── app
 │   ├── Filament
-│   │   └── Pages
-│   │       ├── Account
-│   │       │   └── Settings.php
-│   │       ├── Dashboard.php
-│   │       ├── Errors
-│   │       │   └── ReviewErrors.php
-│   │       ├── Progress
-│   │       │   └── MyProgress.php
-│   │       ├── Quiz
-│   │       │   └── QuizIndex.php
-│   │       └── Theory
-│   │           ├── TheoryIndex.php
-│   │           └── TheoryView.php
+│   │   ├── Pages
+│   │   │   ├── Account
+│   │   │   │   └── Settings.php
+│   │   │   ├── Dashboard.php
+│   │   │   ├── Errors
+│   │   │   │   └── ReviewErrors.php
+│   │   │   ├── Progress
+│   │   │   │   └── MyProgress.php
+│   │   │   ├── Quiz
+│   │   │   │   └── QuizIndex.php
+│   │   │   └── Theory
+│   │   │       ├── TheoryIndex.php
+│   │   │       └── TheoryView.php
+│   │   └── Resources
+│   │       ├── SubtopicResource
+│   │       │   └── Pages
+│   │       │       ├── CreateSubtopic.php
+│   │       │       ├── EditSubtopic.php
+│   │       │       └── ListSubtopics.php
+│   │       ├── SubtopicResource.php
+│   │       ├── TheoryContentResource
+│   │       │   └── Pages
+│   │       │       ├── CreateTheoryContent.php
+│   │       │       ├── EditTheoryContent.php
+│   │       │       └── ListTheoryContents.php
+│   │       ├── TheoryContentResource.php
+│   │       ├── TopicResource
+│   │       │   ├── Pages
+│   │       │   │   ├── CreateTopic.php
+│   │       │   │   ├── EditTopic.php
+│   │       │   │   └── ListTopics.php
+│   │       │   ├── RelationManagers
+│   │       │   │   └── SubtopicsRelationManager.php
+│   │       │   └── Widgets
+│   │       │       └── TopicStatsOverview.php
+│   │       └── TopicResource.php
 │   ├── Http
 │   │   └── Controllers
 │   │       └── Controller.php
 │   ├── Models
-│   │   ├── Category.php
 │   │   ├── Question.php
 │   │   ├── QuizAnswer.php
 │   │   ├── QuizSession.php
@@ -126,7 +148,9 @@
 │   │       ├── 01JX0ZMDW2G49VYKRNDMZNKFT2.png
 │   │       ├── 01JX0ZPBXFF36FKK2D20F69AYZ.png
 │   │       ├── 01JX0ZQXYEKE8A9G1HC4GPG8AA.jpg
-│   │       └── 01JX4XDDMNJ6YR9SN1P7T0E8XG.jpg
+│   │       ├── 01JX4XDDMNJ6YR9SN1P7T0E8XG.jpg
+│   │       └── theory-images
+│   │           └── 01JX580FXXNEN2ZE8K3T2YRDNY.jpg
 │   ├── framework
 │   │   ├── cache
 │   │   │   ├── data
@@ -143,4 +167,4 @@
 │       └── ExampleTest.php
 └── vite.config.js
 
-56 directories, 88 files
+66 directories, 102 files
