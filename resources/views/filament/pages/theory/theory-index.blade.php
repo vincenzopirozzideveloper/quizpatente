@@ -103,37 +103,9 @@
                     <div class="space-y-3 mb-6">
                         {{-- Sottoargomenti --}}
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600 dark:text-gray-400">Sottoargomenti</span>
+                            <span class="text-gray-600 dark:text-gray-400">Definizioni:</span>
                             <span class="font-medium text-gray-900 dark:text-white">{{ $topic['subtopics_count'] }}</span>
                         </div>
-                        
-                        {{-- Domande --}}
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600 dark:text-gray-400">Domande</span>
-                            <span class="font-medium text-gray-900 dark:text-white">
-                                {{ $topic['completed_questions'] }}/{{ $topic['total_questions'] }}
-                            </span>
-                        </div>
-                        
-                        {{-- Accuratezza --}}
-                        @if($topic['accuracy_rate'] > 0)
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-600 dark:text-gray-400">Accuratezza</span>
-                                <span class="font-medium {{ $topic['accuracy_rate'] >= 80 ? 'text-success-600 dark:text-success-400' : 'text-warning-600 dark:text-warning-400' }}">
-                                    {{ $topic['accuracy_rate'] }}%
-                                </span>
-                            </div>
-                        @endif
-                        
-                        {{-- Ultima attività --}}
-                        @if($topic['last_activity'])
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-600 dark:text-gray-400">Ultima attività</span>
-                                <span class="text-gray-900 dark:text-white">
-                                    {{ $topic['last_activity']->diffForHumans() }}
-                                </span>
-                            </div>
-                        @endif
                     </div>
                     
                     {{-- Progress bar dettagliata --}}
