@@ -1,15 +1,15 @@
+{{-- resources/views/filament/pages/theory/theory-view.blade.php --}}
 <x-filament-panels::page>
-    <div x-data="theoryViewApp()" 
-         x-init="init()"
-         @statsUpdated.window="updateStats($event.detail.stats)"
-         class="h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950 -m-6">
+    <div class="h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 -m-6 overflow-hidden" 
+         x-data="theoryView()" 
+         x-init="init()">
         
-        {{-- Modern Header Bar --}}
-        <div class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 px-6 py-3">
+        {{-- Header Bar --}}
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <button wire:click="backToTopics" 
-                            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                         <x-heroicon-o-arrow-left class="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                     
@@ -23,38 +23,16 @@
                     </div>
                 </div>
                 
-                {{-- View Mode Switcher --}}
-                <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                    <button wire:click="switchViewMode('grid')"
-                            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                                   {{ $viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400' }}">
-                        <div class="flex items-center space-x-2">
-                            <x-heroicon-o-squares-2x2 class="w-4 h-4" />
-                            <span>Griglia</span>
-                        </div>
-                    </button>
-                    <button wire:click="switchViewMode('list')"
-                            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                                   {{ $viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400' }}">
-                        <div class="flex items-center space-x-2">
-                            <x-heroicon-o-bars-3 class="w-4 h-4" />
-                            <span>Lista</span>
-                        </div>
-                    </button>
-                    <button wire:click="switchViewMode('focus')"
-                            class="px-3 py-1.5 rounded-md text-sm font-medium transition-all
-                                   {{ $viewMode === 'focus' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400' }}">
-                        <div class="flex items-center space-x-2">
-                            <x-heroicon-o-book-open class="w-4 h-4" />
-                            <span>Focus</span>
-                        </div>
-                    </button>
-                </div>
+                {{-- Progress Toggle --}}
+                <button wire:click="toggleProgress"
+                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <x-heroicon-o-chart-bar class="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
             </div>
         </div>
 
         {{-- Progress Overview Bar --}}
-        <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4"
+        <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4"
              x-show="showProgress"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 -translate-y-4"
@@ -69,10 +47,6 @@
                     <div class="relative h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
                              :style="'width: ' + stats.percentage + '%'"></div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span class="text-xs font-medium text-white mix-blend-difference" 
-                                  x-text="stats.completed + ' di ' + stats.total"></span>
-                        </div>
                     </div>
                 </div>
                 
@@ -90,7 +64,7 @@
                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
                                                : ($status === 'reading' 
                                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' 
-                                                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400')) }}">
+                                                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400')) }}">
                             {{ $content->code }} - {{ Str::limit($content->title, 20) }}
                         </button>
                     @endforeach
@@ -98,314 +72,144 @@
             </div>
         </div>
 
-        {{-- Main Content Area --}}
-        <div class="flex-1 overflow-hidden">
-            {{-- Grid View --}}
-            <div x-show="viewMode === 'grid'" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 class="h-full overflow-y-auto p-6">
-                
-                {{-- Filters --}}
-                <div class="mb-6 flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <button wire:click="filterByStatus('all')"
-                                class="px-3 py-1 rounded-full text-sm font-medium transition-colors
-                                       {{ $filterStatus === 'all' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300' }}">
-                            Tutti ({{ $stats['total'] }})
-                        </button>
-                        <button wire:click="filterByStatus('unread')"
-                                class="px-3 py-1 rounded-full text-sm font-medium transition-colors
-                                       {{ $filterStatus === 'unread' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300' }}">
-                            Da leggere ({{ $stats['total'] - $stats['completed'] - $stats['inProgress'] }})
-                        </button>
-                        <button wire:click="filterByStatus('reading')"
-                                class="px-3 py-1 rounded-full text-sm font-medium transition-colors
-                                       {{ $filterStatus === 'reading' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300' }}">
-                            In lettura ({{ $stats['inProgress'] }})
-                        </button>
-                        <button wire:click="filterByStatus('read')"
-                                class="px-3 py-1 rounded-full text-sm font-medium transition-colors
-                                       {{ $filterStatus === 'read' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300' }}">
-                            Completati ({{ $stats['completed'] }})
-                        </button>
-                    </div>
-                    
-                    <div class="relative">
-                        <input type="text" 
-                               wire:model.live.debounce.300ms="searchQuery"
-                               placeholder="Cerca contenuti..."
-                               class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg 
-                                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                      focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <x-heroicon-o-magnifying-glass class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    </div>
-                </div>
-                
-                {{-- Content Grid --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    @foreach($this->filteredContents as $content)
-                        @php
-                            $status = $contentStatuses[$content->id] ?? 'unread';
-                        @endphp
-                        <div class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden
-                                    {{ $contentId === $content->id ? 'ring-2 ring-blue-500' : '' }}">
-                            
-                            {{-- Status Badge --}}
-                            <div class="absolute top-3 right-3 z-10">
-                                <button wire:click="toggleContentStatus({{ $content->id }})"
-                                        class="p-2 rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-lg
-                                               hover:scale-110 transition-transform">
-                                    @if ($status === 'read')
-                                        <x-heroicon-s-check-circle class="w-6 h-6 text-green-500" />
-                                    @elseif ($status === 'reading')
-                                        <x-heroicon-o-clock class="w-6 h-6 text-amber-500" />
-                                    @else
-                                        <x-heroicon-o-check-circle class="w-6 h-6 text-gray-400" />
-                                    @endif
-                                </button>
-                            </div>
-                            
-                            {{-- Content Preview --}}
-                            <button wire:click="jumpToContent({{ $content->id }})" 
-                                    class="w-full text-left">
-                                @if($content->image_url)
-                                    <div class="h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                                        <img src="{{ Storage::url($content->image_url) }}" 
-                                             alt=""
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                                    </div>
-                                @else
-                                    <div class="h-40 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 
-                                                flex items-center justify-center">
-                                        <x-heroicon-o-document-text class="w-16 h-16 text-gray-300 dark:text-gray-600" />
-                                    </div>
-                                @endif
-                                
-                                <div class="p-4">
-                                    <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                        <span class="font-mono">{{ $content->code }}</span>
-                                    </div>
-                                    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">{{ $content->title }}</h3>
-                                    <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
-                                        {{ Str::limit(strip_tags($content->content), 120) }}
+        {{-- Main Content Area with Sidebar --}}
+        <div class="flex h-[calc(100%-8rem)]" :class="{ 'h-[calc(100%-4rem)]': !showProgress }">
+            {{-- Content Navigator (Left Sidebar) --}}
+            <div class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+                <div class="p-4">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Navigazione Rapida</h3>
+                    <div class="space-y-1">
+                        @foreach($contents as $idx => $content)
+                            @php
+                                $status = $contentStatuses[$content->id] ?? 'unread';
+                            @endphp
+                            <button wire:click="jumpToContent({{ $content->id }})"
+                                    class="w-full flex items-center space-x-3 p-2 rounded-lg transition-colors
+                                           {{ $contentId === $content->id 
+                                               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                                               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
+                                <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $content->code }}</span>
+                                <div class="flex-1 text-left">
+                                    <p class="text-sm {{ $contentId === $content->id ? 'font-medium' : '' }} line-clamp-1">
+                                        {{ $content->title }}
                                     </p>
                                 </div>
+                                @if ($status === 'read')
+                                    <x-heroicon-s-check-circle class="w-5 h-5 text-green-500 flex-shrink-0" />
+                                @elseif ($status === 'reading')
+                                    <x-heroicon-o-clock class="w-5 h-5 text-amber-500 flex-shrink-0" />
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            {{-- Reading Area --}}
+            @if($currentContent)
+                <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
+                    {{-- Reading Header --}}
+                    <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
+                                    <span class="font-mono">{{ $currentContent->code }}</span>
+                                </div>
+                                <h2 class="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                                    {{ $currentContent->title }}
+                                </h2>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    Contenuto {{ $currentIndex + 1 }} di {{ $contents->count() }}
+                                </p>
+                            </div>
+                            
+                            <button wire:click="markAsComplete"
+                                    class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all
+                                           {{ ($contentStatuses[$currentContent->id] ?? 'unread') === 'read'
+                                               ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' }}">
+                                @if (($contentStatuses[$currentContent->id] ?? 'unread') === 'read')
+                                    <x-heroicon-s-check-circle class="w-5 h-5" />
+                                    <span>Completato</span>
+                                @else
+                                    <x-heroicon-o-check-circle class="w-5 h-5" />
+                                    <span>Segna come completato</span>
+                                @endif
                             </button>
                         </div>
-                    @endforeach
-                </div>
-            </div>
+                    </div>
 
-            {{-- List View --}}
-            <div x-show="viewMode === 'list'"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-x-4"
-                 x-transition:enter-end="opacity-100 translate-x-0"
-                 class="h-full overflow-y-auto">
-                <div class="max-w-4xl mx-auto p-6 space-y-3">
-                    @foreach($this->filteredContents as $content)
-                        @php
-                            $status = $contentStatuses[$content->id] ?? 'unread';
-                        @endphp
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-200
-                                    {{ $contentId === $content->id ? 'ring-2 ring-blue-500' : '' }}">
-                            <div class="flex items-center p-4">
-                                <button wire:click="toggleContentStatus({{ $content->id }})"
-                                        class="flex-shrink-0 mr-4">
-                                    @if ($status === 'read')
-                                        <x-heroicon-s-check-circle class="w-8 h-8 text-green-500" />
-                                    @elseif ($status === 'reading')
-                                        <x-heroicon-o-clock class="w-8 h-8 text-amber-500" />
-                                    @else
-                                        <x-heroicon-o-check-circle class="w-8 h-8 text-gray-400 hover:text-gray-600" />
+                    {{-- Reading Content --}}
+                    <div class="flex-1 overflow-y-auto">
+                        <article class="max-w-4xl mx-auto px-8 py-12">
+                            @if ($currentContent->image_url && $currentContent->image_position === 'before')
+                                <figure class="mb-8 flex flex-col items-center">
+                                    <img src="{{ Storage::url($currentContent->image_url) }}" 
+                                         alt="{{ $currentContent->image_caption ?? '' }}"
+                                         class="max-w-full max-h-96 object-contain rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                    @if ($currentContent->image_caption)
+                                        <figcaption class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400 italic">
+                                            {{ $currentContent->image_caption }}
+                                        </figcaption>
                                     @endif
-                                </button>
-                                
-                                <button wire:click="jumpToContent({{ $content->id }})" 
-                                        class="flex-1 text-left">
-                                    <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <div class="flex items-center space-x-2 mb-1">
-                                                <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $content->code }}</span>
-                                                <span class="text-sm text-gray-400">•</span>
-                                                <span class="font-medium text-gray-900 dark:text-white">{{ $content->title }}</span>
-                                            </div>
-                                            <p class="text-gray-700 dark:text-gray-300">
-                                                {{ Str::limit(strip_tags($content->content), 150) }}
-                                            </p>
-                                        </div>
-                                        @if($content->image_url)
-                                            <div class="ml-4 flex-shrink-0">
-                                                <img src="{{ Storage::url($content->image_url) }}" 
-                                                     alt=""
-                                                     class="w-20 h-20 object-cover rounded-lg">
-                                            </div>
-                                        @endif
-                                    </div>
-                                </button>
+                                </figure>
+                            @endif
+
+                            <div class="prose prose-lg prose-gray dark:prose-invert max-w-none">
+                                {!! Str::markdown($currentContent->content) !!}
                             </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
 
-            {{-- Focus View --}}
-            <div x-show="viewMode === 'focus'"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 class="h-full flex">
-                
-                {{-- Content Navigator (Left Panel) --}}
-                <div class="w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto">
-                    <div class="p-4">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Navigazione Rapida</h3>
-                        <div class="space-y-1">
-                            @foreach($contents as $idx => $content)
-                                @php
-                                    $status = $contentStatuses[$content->id] ?? 'unread';
-                                @endphp
-                                <button wire:click="jumpToContent({{ $content->id }})"
-                                        class="w-full flex items-center space-x-3 p-2 rounded-lg transition-colors
-                                               {{ $contentId === $content->id 
-                                                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
-                                                   : 'hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-                                    <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $content->code }}</span>
-                                    <div class="flex-1 text-left">
-                                        <p class="text-sm {{ $contentId === $content->id ? 'font-medium' : '' }} line-clamp-1">
-                                            {{ $content->title }}
-                                        </p>
-                                    </div>
-                                    @if ($status === 'read')
-                                        <x-heroicon-s-check-circle class="w-5 h-5 text-green-500 flex-shrink-0" />
-                                    @elseif ($status === 'reading')
-                                        <x-heroicon-o-clock class="w-5 h-5 text-amber-500 flex-shrink-0" />
+                            @if ($currentContent->image_url && $currentContent->image_position === 'after')
+                                <figure class="mt-8 flex flex-col items-center">
+                                    <img src="{{ Storage::url($currentContent->image_url) }}" 
+                                         alt="{{ $currentContent->image_caption ?? '' }}"
+                                         class="max-w-full max-h-96 object-contain rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+                                    @if ($currentContent->image_caption)
+                                        <figcaption class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400 italic">
+                                            {{ $currentContent->image_caption }}
+                                        </figcaption>
                                     @endif
-                                </button>
-                            @endforeach
+                                </figure>
+                            @endif
+                        </article>
+                    </div>
+
+                    {{-- Navigation Footer --}}
+                    <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-8 py-4">
+                        <div class="flex items-center justify-between">
+                            <button wire:click="previousContent"
+                                    class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all
+                                           {{ $currentIndex > 0 
+                                               ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' 
+                                               : 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' }}"
+                                    {{ $currentIndex === 0 ? 'disabled' : '' }}>
+                                <x-heroicon-o-arrow-left class="w-5 h-5" />
+                                <span>Precedente</span>
+                            </button>
+
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ $currentIndex + 1 }} / {{ $contents->count() }}
+                                </span>
+                            </div>
+
+                            <button wire:click="nextContent"
+                                    class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all
+                                           {{ $currentIndex < $contents->count() - 1 
+                                               ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                               : 'bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' }}"
+                                    {{ $currentIndex === $contents->count() - 1 ? 'disabled' : '' }}>
+                                <span>Successivo</span>
+                                <x-heroicon-o-arrow-right class="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                {{-- Reading Area --}}
-                @if($currentContent)
-                    <div class="flex-1 flex flex-col">
-                        {{-- Reading Header --}}
-                        <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <div class="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
-                                        <span class="font-mono">{{ $currentContent->code }}</span>
-                                    </div>
-                                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mt-1">
-                                        {{ $currentContent->title }}
-                                    </h2>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        Contenuto {{ $currentIndex + 1 }} di {{ $contents->count() }}
-                                    </p>
-                                </div>
-                                
-                                <button wire:click="markAsComplete"
-                                        class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all
-                                               {{ ($contentStatuses[$currentContent->id] ?? 'unread') === 'read'
-                                                   ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                                                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' }}">
-                                    @if (($contentStatuses[$currentContent->id] ?? 'unread') === 'read')
-                                        <x-heroicon-s-check-circle class="w-5 h-5" />
-                                        <span>Completato</span>
-                                    @else
-                                        <x-heroicon-o-check-circle class="w-5 h-5" />
-                                        <span>Segna come completato</span>
-                                    @endif
-                                </button>
-                            </div>
-                        </div>
-
-                        {{-- Reading Content --}}
-                        <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
-                            <article class="max-w-4xl mx-auto px-8 py-12">
-                                @if ($currentContent->image_url && $currentContent->image_position === 'before')
-                                    <figure class="mb-8">
-                                        <div class="flex justify-center">
-                                            <img src="{{ Storage::url($currentContent->image_url) }}" 
-                                                 alt="{{ $currentContent->image_caption ?? '' }}"
-                                                 class="max-w-full h-auto max-h-[500px] object-scale-down rounded-xl shadow-lg"
-                                                 style="width: auto; height: auto;">
-                                        </div>
-                                        @if ($currentContent->image_caption)
-                                            <figcaption class="text-sm text-gray-600 dark:text-gray-400 text-center mt-3 italic">
-                                                {{ $currentContent->image_caption }}
-                                            </figcaption>
-                                        @endif
-                                    </figure>
-                                @endif
-
-                                <div class="prose prose-lg prose-gray dark:prose-invert max-w-none">
-                                    {!! Str::markdown($currentContent->content) !!}
-                                </div>
-
-                                @if ($currentContent->image_url && $currentContent->image_position === 'after')
-                                    <figure class="mt-8">
-                                        <div class="flex justify-center">
-                                            <img src="{{ Storage::url($currentContent->image_url) }}" 
-                                                 alt="{{ $currentContent->image_caption ?? '' }}"
-                                                 class="max-w-full h-auto max-h-[500px] object-scale-down rounded-xl shadow-lg"
-                                                 style="width: auto; height: auto;">
-                                        </div>
-                                        @if ($currentContent->image_caption)
-                                            <figcaption class="text-sm text-gray-600 dark:text-gray-400 text-center mt-3 italic">
-                                                {{ $currentContent->image_caption }}
-                                            </figcaption>
-                                        @endif
-                                    </figure>
-                                @endif
-                            </article>
-                        </div>
-
-                        {{-- Navigation Footer --}}
-                        <div class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-8 py-4">
-                            <div class="flex items-center justify-between">
-                                <button wire:click="previousContent"
-                                        class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium
-                                               {{ $currentIndex > 0 
-                                                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' 
-                                                   : 'bg-gray-50 dark:bg-gray-900 text-gray-400 dark:text-gray-600 cursor-not-allowed' }}"
-                                        {{ $currentIndex === 0 ? 'disabled' : '' }}>
-                                    <x-heroicon-o-arrow-left class="w-5 h-5" />
-                                    <span>Precedente</span>
-                                </button>
-
-                                <div class="flex items-center space-x-4">
-                                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $currentIndex + 1 }} / {{ $contents->count() }}
-                                    </span>
-                                </div>
-
-                                <button wire:click="nextContent"
-                                        class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium
-                                               {{ $currentIndex < $contents->count() - 1 
-                                                   ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                                   : 'bg-gray-50 dark:bg-gray-900 text-gray-400 dark:text-gray-600 cursor-not-allowed' }}"
-                                        {{ $currentIndex === $contents->count() - 1 ? 'disabled' : '' }}>
-                                    <span>Successivo</span>
-                                    <x-heroicon-o-arrow-right class="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-            </div>
+            @endif
         </div>
 
-        {{-- Floating Action Buttons --}}
-        <div class="fixed bottom-6 right-6 flex flex-col space-y-3">
-            <button wire:click="toggleProgress"
-                    class="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all">
-                <x-heroicon-o-chart-bar class="w-6 h-6 text-gray-600 dark:text-gray-400" />
-            </button>
-            
+        {{-- Floating Action Menu --}}
+        <div class="fixed bottom-6 right-6">
             <div x-data="{ open: false }" class="relative">
                 <button @click="open = !open"
                         class="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all">
@@ -440,47 +244,48 @@
             -webkit-box-orient: vertical;
         }
         
-        .line-clamp-3 {
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-        }
-        
-        /* Stili aggiuntivi per gestire le immagini nel contenuto */
-        .prose img {
-            max-height: 500px;
+        /* Gestione immagini responsive */
+        article img {
+            max-height: 24rem; /* max-h-96 = 384px */
             width: auto;
             height: auto;
             margin-left: auto;
             margin-right: auto;
-            object-fit: scale-down;
+        }
+        
+        /* Immagini dentro prose content */
+        .prose img {
+            max-width: 100%;
+            height: auto;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
     </style>
 
     <script>
-        function theoryViewApp() {
+        function theoryView() {
             return {
                 stats: @json($stats),
                 showProgress: @entangle('showProgress'),
-                viewMode: @entangle('viewMode'),
                 
                 init() {
                     this.updateProgressBar();
-                },
-                
-                updateStats(newStats) {
-                    this.stats = newStats;
-                    this.updateProgressBar();
+                    
+                    // Listener per aggiornamenti statistiche
+                    Livewire.on('statsUpdated', (event) => {
+                        this.stats = event.stats;
+                        this.updateProgressBar();
+                    });
                 },
                 
                 updateProgressBar() {
                     this.$nextTick(() => {
-                        const progressBars = document.querySelectorAll('[data-progress]');
-                        progressBars.forEach(bar => {
-                            const width = bar.getAttribute('data-progress');
-                            bar.style.width = width + '%';
-                        });
+                        const progressBar = document.querySelector('[data-progress]');
+                        if (progressBar) {
+                            progressBar.style.width = this.stats.percentage + '%';
+                        }
                     });
                 }
             }
@@ -491,31 +296,24 @@
             if (e.target.matches('input, textarea')) return;
             
             switch(e.key) {
-                case '1':
-                    @this.switchViewMode('grid');
-                    break;
-                case '2':
-                    @this.switchViewMode('list');
-                    break;
-                case '3':
-                    @this.switchViewMode('focus');
-                    break;
                 case 'ArrowLeft':
-                    if (@this.viewMode === 'focus') {
-                        e.preventDefault();
-                        @this.previousContent();
-                    }
+                    e.preventDefault();
+                    @this.previousContent();
                     break;
                 case 'ArrowRight':
-                    if (@this.viewMode === 'focus') {
-                        e.preventDefault();
-                        @this.nextContent();
-                    }
+                    e.preventDefault();
+                    @this.nextContent();
                     break;
                 case ' ':
                     if (e.ctrlKey || e.metaKey) {
                         e.preventDefault();
                         @this.markAsComplete();
+                    }
+                    break;
+                case 'p':
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        @this.toggleProgress();
                     }
                     break;
             }
