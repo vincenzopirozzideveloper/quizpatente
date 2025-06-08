@@ -3,68 +3,71 @@
 namespace App\Filament\Resources\TheoryContentResource\Pages;
 
 use App\Filament\Resources\TheoryContentResource;
-use App\Models\Topic;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Components\Tab;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\On;
 
 class ListTheoryContents extends ListRecords
 {
     protected static string $resource = TheoryContentResource::class;
 
-    public ?Topic $topic = null;
-
-    public function mount(): void
+    // Ascolta l'evento per aggiornare i tab
+    #[On('theory-progress-updated')]
+    public function refresh(): void
     {
-        parent::mount();
-
-        if (request()->has('topic')) {
-            /** @var Topic|null $topic */
-            $topic = Topic::find(request('topic'));
-            $this->topic = $topic;
-        }
+        // Questo forzerà il re-render della pagina e aggiornerà i badge
     }
 
     protected function getHeaderActions(): array
     {
-        $actions = [
-            Actions\CreateAction::make()
-                ->label('Nuovo Contenuto')
-                ->url(fn() => $this->topic
-                    ? TheoryContentResource::getUrl('create', ['topic' => $this->topic->id])
-                    : TheoryContentResource::getUrl('create')),
+        return [];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            TheoryContentResource\Widgets\TheoryProgressStats::class,
         ];
-
-        if ($this->topic) {
-            array_unshift(
-                $actions,
-                Actions\Action::make('back')
-                    ->label('Torna agli argomenti')
-                    ->icon('heroicon-o-arrow-left')
-                    ->color('gray')
-                    ->url(\App\Filament\Resources\TopicResource::getUrl('index'))
-            );
-        }
-
-        return $actions;
     }
 
-    public function getHeading(): string
+    public function getTabs(): array
     {
-        if ($this->topic) {
-            return "Contenuti di: {$this->topic->name}";
-        }
-
-        return 'Contenuti Teoria';
-    }
-
-    protected function getTableQuery(): \Illuminate\Database\Eloquent\Builder
-    {
-        $query = parent::getTableQuery();
-
-        if ($this->topic) {
-            $query->where('topic_id', $this->topic->id);
-        }
-
-        return $query;
+        return [
+            'all' => Tab::make('Tutti')
+                ->badge(static::getResource()::getModel()::published()->count())
+                ->badgeColor('gray'),
+                
+            'unread' => Tab::make('Non letti')
+                ->modifyQueryUsing(fn (Builder $query) => 
+                    $query->whereDoesntHave('currentUserProgress', 
+                        fn ($q) => $q->where('status', 'read')
+                    )
+                )
+                ->badge(
+                    static::getResource()::getModel()::published()
+                        ->whereDoesntHave('currentUserProgress', 
+                            fn ($q) => $q->where('status', 'read')
+                        )
+                        ->count()
+                )
+                ->badgeColor('danger'),
+                
+            'completed' => Tab::make('Completati')
+                ->modifyQueryUsing(fn (Builder $query) => 
+                    $query->whereHas('currentUserProgress', 
+                        fn ($q) => $q->where('status', 'read')
+                    )
+                )
+                ->badge(
+                    static::getResource()::getModel()::published()
+                        ->whereHas('currentUserProgress', 
+                            fn ($q) => $q->where('status', 'read')
+                        )
+                        ->count()
+                )
+                ->badgeColor('success'),
+        ];
     }
 }

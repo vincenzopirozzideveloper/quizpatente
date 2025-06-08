@@ -4,287 +4,361 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TheoryContentResource\Pages;
 use App\Models\TheoryContent;
-use App\Models\Topic;
+use App\Models\UserTheoryProgress;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Support\Enums\FontWeight;
 
 class TheoryContentResource extends Resource
 {
     protected static ?string $model = TheoryContent::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    
-    protected static ?string $navigationGroup = 'Gestione Contenuti';
-    
-    protected static ?string $navigationLabel = 'Contenuti Teoria';
-    
-    protected static ?string $modelLabel = 'Contenuto';
-    
-    protected static ?string $pluralModelLabel = 'Contenuti';
-    
-    protected static ?int $navigationSort = 4;
-    
-    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
-    public static function form(Form $form): Form
+    protected static ?string $navigationGroup = 'Area Studio';
+
+    protected static ?string $navigationLabel = 'Teoria';
+
+    protected static ?string $modelLabel = 'Contenuto Teorico';
+
+    protected static ?string $pluralModelLabel = 'Contenuti Teorici';
+
+    protected static ?int $navigationSort = 2;
+
+    public static function canCreate(): bool
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Informazioni Base')
-                    ->schema([
-                        Forms\Components\Select::make('topic_id')
-                            ->label('Argomento')
-                            ->options(Topic::query()->ordered()->pluck('name', 'id'))
-                            ->required()
-                            ->searchable()
-                            ->preload(),
-                            
-                        Forms\Components\TextInput::make('code')
-                            ->label('Codice')
-                            ->required()
-                            ->maxLength(20)
-                            ->placeholder('es: 1.1, 1.2, 2.1...')
-                            ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule, $get) {
-                                return $rule->where('topic_id', $get('topic_id'));
-                            }),
-                            
-                        Forms\Components\TextInput::make('title')
-                            ->label('Titolo')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('es: Strada, Carreggiata, Segnali di pericolo...'),
-                            
-                        Forms\Components\TextInput::make('order')
-                            ->label('Ordine')
-                            ->numeric()
-                            ->default(0)
-                            ->minValue(0),
-                            
-                        Forms\Components\Toggle::make('is_published')
-                            ->label('Pubblicato')
-                            ->default(true),
-                    ])
-                    ->columns(2),
-                    
-                Forms\Components\Section::make('Immagine (Opzionale)')
-                    ->schema([
-                        Forms\Components\FileUpload::make('image_url')
-                            ->label('Immagine')
-                            ->image()
-                            ->directory('theory-images')
-                            ->maxSize(5120) // 5MB
-                            ->imageResizeMode('contain')
-                            ->imageCropAspectRatio(null)
-                            ->imageResizeTargetWidth('1920')
-                            ->imageResizeTargetHeight('1080')
-                            ->helperText('L\'immagine verrà visualizzata prima o dopo il contenuto testuale'),
-                            
-                        Forms\Components\TextInput::make('image_caption')
-                            ->label('Didascalia immagine')
-                            ->maxLength(255)
-                            ->placeholder('Descrizione dell\'immagine (opzionale)'),
-                            
-                        Forms\Components\Radio::make('image_position')
-                            ->label('Posizione immagine')
-                            ->options([
-                                'before' => 'Prima del testo',
-                                'after' => 'Dopo il testo',
-                            ])
-                            ->default('before')
-                            ->inline()
-                            ->visible(fn (Forms\Get $get): bool => !empty($get('image_url'))),
-                    ])
-                    ->columns(1)
-                    ->collapsed()
-                    ->collapsible(),
-                    
-                Forms\Components\Section::make('Contenuto')
-                    ->schema([
-                        Forms\Components\MarkdownEditor::make('content')
-                            ->label('Contenuto')
-                            ->required()
-                            ->toolbarButtons([
-                                'heading',
-                                'bold',
-                                'italic',
-                                'strike',
-                                'link',
-                                'orderedList',
-                                'unorderedList',
-                                'redo',
-                                'undo',
-                            ])
-                            ->columnSpanFull(),
-                    ]),
-            ]);
+        return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                TheoryContent::query()
+                    ->published()
+                    ->with(['topic', 'currentUserProgress'])
+            )
             ->columns([
-                Tables\Columns\TextColumn::make('order')
-                    ->label('Ordine')
-                    ->sortable()
-                    ->width('80px'),
-                    
-                Tables\Columns\TextColumn::make('code')
-                    ->label('Codice')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('gray'),
-                    
                 Tables\Columns\TextColumn::make('topic.name')
                     ->label('Argomento')
-                    ->searchable()
-                    ->sortable()
                     ->badge()
                     ->color('primary')
-                    ->limit(30),
-                    
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Codice')
+                    ->badge()
+                    ->color('gray')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('title')
                     ->label('Titolo')
                     ->searchable()
-                    ->sortable()
-                    ->weight('medium')
-                    ->limit(40),
-                    
-                Tables\Columns\ImageColumn::make('image_url')
+                    ->weight(FontWeight::Medium)
+                    ->description(
+                        fn(TheoryContent $record): string =>
+                        str($record->content)->limit(100)->toString()
+                    ),
+
+                Tables\Columns\TextColumn::make('progress_status')
+                    ->label('Stato')
+                    ->badge()
+                    ->getStateUsing(function (TheoryContent $record): string {
+                        return $record->currentUserProgress?->status ?? 'unread';
+                    })
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'read' => 'Completato',
+                        'reading' => 'In lettura',
+                        default => 'Non letto',
+                    })
+                    ->color(fn(string $state): string => match ($state) {
+                        'read' => 'success',
+                        'reading' => 'warning',
+                        default => 'gray',
+                    })
+                    ->icon(fn(string $state): string => match ($state) {
+                        'read' => 'heroicon-o-check-circle',
+                        'reading' => 'heroicon-o-clock',
+                        default => 'heroicon-o-book-open',
+                    }),
+
+                Tables\Columns\IconColumn::make('has_image')
                     ->label('Immagine')
-                    ->circular()
-                    ->defaultImageUrl(url('/images/placeholder.jpg'))
-                    ->toggleable(),
-                    
-                Tables\Columns\TextColumn::make('content')
-                    ->label('Contenuto')
-                    ->limit(50)
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn (string $state): string => strip_tags($state)),
-                    
-                Tables\Columns\ToggleColumn::make('is_published')
-                    ->label('Pubblicato'),
-                    
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Creato il')
+                    ->getStateUsing(
+                        fn(TheoryContent $record): bool =>
+                        $record->image_url !== null
+                    )
+                    ->boolean()
+                    ->trueIcon('heroicon-o-photo')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->trueColor('info')
+                    ->falseColor('gray'),
+
+                Tables\Columns\TextColumn::make('currentUserProgress.completed_at')
+                    ->label('Completato il')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable()
+                    ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('topic_id')
-                    ->label('Argomento')
-                    ->options(Topic::query()->ordered()->pluck('name', 'id'))
+                Tables\Filters\SelectFilter::make('topic')
+                    ->relationship('topic', 'name')
                     ->searchable()
-                    ->preload(),
-                    
-                Tables\Filters\TernaryFilter::make('is_published')
-                    ->label('Stato pubblicazione')
+                    ->preload()
+                    ->multiple()
+                    ->label('Argomento'),
+
+                Tables\Filters\TernaryFilter::make('progress')
+                    ->label('Stato lettura')
                     ->placeholder('Tutti')
-                    ->trueLabel('Pubblicati')
-                    ->falseLabel('Bozze'),
-                    
-                Tables\Filters\TernaryFilter::make('has_image')
-                    ->label('Immagine')
-                    ->placeholder('Tutti')
-                    ->trueLabel('Con immagine')
-                    ->falseLabel('Senza immagine')
+                    ->trueLabel('Completati')
+                    ->falseLabel('Non completati')
                     ->queries(
-                        true: fn (Builder $query) => $query->whereNotNull('image_url'),
-                        false: fn (Builder $query) => $query->whereNull('image_url'),
+                        true: fn(Builder $query) => $query->whereHas(
+                            'currentUserProgress',
+                            fn($q) => $q->where('status', 'read')
+                        ),
+                        false: fn(Builder $query) => $query->whereDoesntHave(
+                            'currentUserProgress',
+                            fn($q) => $q->where('status', 'read')
+                        ),
+                    ),
+
+                Tables\Filters\TernaryFilter::make('has_image')
+                    ->label('Con immagine')
+                    ->queries(
+                        true: fn(Builder $query) => $query->whereNotNull('image_url'),
+                        false: fn(Builder $query) => $query->whereNull('image_url'),
                     ),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
-                    ->modalHeading('Visualizza contenuto')
-                    ->modalWidth('7xl')
-                    ->modalContent(function (TheoryContent $record) {
-                        return view('filament.resources.theory-content-preview', [
-                            'record' => $record
-                        ]);
+                    ->label('Leggi')
+                    ->icon('heroicon-m-book-open')
+                    ->after(function (TheoryContent $record) {
+                        // Marca come "in lettura" quando viene aperto
+                        if (!$record->currentUserProgress || $record->currentUserProgress->status === 'unread') {
+                            UserTheoryProgress::markAsReading(auth()->id(), $record->id);
+                        }
                     }),
                     
-                Tables\Actions\EditAction::make(),
-                
-                Tables\Actions\Action::make('duplicate')
-                    ->label('Duplica')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->requiresConfirmation()
-                    ->modalHeading('Duplica contenuto')
-                    ->modalDescription('Vuoi duplicare questo contenuto? Verrà creata una copia.')
-                    ->action(function (TheoryContent $record) {
-                        $newContent = $record->replicate();
-                        $newContent->code = $record->code . '-copia';
-                        $newContent->created_at = now();
-                        $newContent->save();
+                Tables\Actions\Action::make('toggleComplete')
+                    ->label(fn (TheoryContent $record): string => 
+                        $record->currentUserProgress?->status === 'read' 
+                            ? 'Segna come non letto' 
+                            : 'Segna come completato'
+                    )
+                    ->icon(fn (TheoryContent $record): string => 
+                        $record->currentUserProgress?->status === 'read' 
+                            ? 'heroicon-o-x-circle' 
+                            : 'heroicon-o-check-circle'
+                    )
+                    ->color(fn (TheoryContent $record): string => 
+                        $record->currentUserProgress?->status === 'read' 
+                            ? 'gray' 
+                            : 'success'
+                    )
+                    ->requiresConfirmation(false)
+                    ->action(function (TheoryContent $record, $livewire) {
+                        UserTheoryProgress::toggleReadStatus(auth()->id(), $record->id);
                         
-                        \Filament\Notifications\Notification::make()
-                            ->title('Contenuto duplicato')
-                            ->success()
-                            ->send();
-                    }),
-                
-                Tables\Actions\DeleteAction::make()
-                    ->requiresConfirmation()
-                    ->modalHeading('Elimina contenuto')
-                    ->modalDescription('Sei sicuro di voler eliminare questo contenuto?')
-                    ->modalSubmitActionLabel('Sì, elimina')
-                    ->after(function (TheoryContent $record) {
-                        // Elimina l'immagine se presente
-                        if ($record->image_url && Storage::exists($record->image_url)) {
-                            Storage::delete($record->image_url);
-                        }
+                        // Emetti evento per aggiornare il widget
+                        $livewire->dispatch('theory-progress-updated');
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->requiresConfirmation()
-                        ->modalHeading('Elimina contenuti selezionati')
-                        ->modalDescription('Sei sicuro di voler eliminare i contenuti selezionati?')
-                        ->modalSubmitActionLabel('Sì, elimina'),
+                Tables\Actions\BulkAction::make('markAsRead')
+                    ->label('Segna come completati')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($records, $livewire) {
+                        foreach ($records as $record) {
+                            UserTheoryProgress::markAsRead(auth()->id(), $record->id);
+                        }
                         
-                    Tables\Actions\BulkAction::make('publish')
-                        ->label('Pubblica')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->action(fn ($records) => $records->each->update(['is_published' => true]))
-                        ->deselectRecordsAfterCompletion(),
+                        // Emetti evento per aggiornare il widget
+                        $livewire->dispatch('theory-progress-updated');
+                    })
+                    ->deselectRecordsAfterCompletion(),
+                    
+                Tables\Actions\BulkAction::make('markAsUnread')
+                    ->label('Segna come non letti')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->action(function ($records, $livewire) {
+                        foreach ($records as $record) {
+                            UserTheoryProgress::where('user_id', auth()->id())
+                                ->where('theory_content_id', $record->id)
+                                ->update(['status' => 'unread', 'completed_at' => null]);
+                        }
                         
-                    Tables\Actions\BulkAction::make('unpublish')
-                        ->label('Metti in bozza')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('warning')
-                        ->requiresConfirmation()
-                        ->action(fn ($records) => $records->each->update(['is_published' => false]))
-                        ->deselectRecordsAfterCompletion(),
-                ]),
+                        // Emetti evento per aggiornare il widget
+                        $livewire->dispatch('theory-progress-updated');
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ])
             ->defaultSort('topic_id')
-            ->reorderable('order');
+            ->defaultGroup('topic.name')
+            ->groups([
+                Tables\Grouping\Group::make('topic.name')
+                    ->label('Argomento')
+                    ->getTitleFromRecordUsing(
+                        fn(TheoryContent $record): string =>
+                        "{$record->topic->code} - {$record->topic->name}"
+                    )
+                    ->collapsible(),
+            ])
+            ->striped()
+            ->poll('60s');
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Infolists\Components\Section::make()
+                    ->heading('Informazioni')
+                    ->description(
+                        fn(TheoryContent $record): string =>
+                        "Argomento: {$record->topic->name}"
+                    )
+                    ->schema([
+                        Infolists\Components\Grid::make(3)
+                            ->schema([
+                                Infolists\Components\TextEntry::make('code')
+                                    ->label('Codice')
+                                    ->badge()
+                                    ->color('gray'),
+
+                                Infolists\Components\TextEntry::make('progress_status')
+                                    ->label('Stato lettura')
+                                    ->badge()
+                                    ->getStateUsing(function (TheoryContent $record): string {
+                                        return $record->currentUserProgress?->status ?? 'unread';
+                                    })
+                                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                                        'read' => 'Completato',
+                                        'reading' => 'In lettura',
+                                        default => 'Non letto',
+                                    })
+                                    ->color(fn(string $state): string => match ($state) {
+                                        'read' => 'success',
+                                        'reading' => 'warning',
+                                        default => 'gray',
+                                    }),
+
+                                Infolists\Components\TextEntry::make('currentUserProgress.completed_at')
+                                    ->label('Completato il')
+                                    ->dateTime('d/m/Y H:i')
+                                    ->placeholder('Non ancora completato'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                Infolists\Components\Section::make('Contenuto')
+                    ->heading(fn(TheoryContent $record): string => $record->title)
+                    ->schema([
+                        // Immagine prima del contenuto (se presente e posizionata prima)
+                        Infolists\Components\ImageEntry::make('image_url')
+                            ->label('')
+                            ->visible(
+                                fn(TheoryContent $record): bool =>
+                                $record->image_url !== null && $record->image_position === 'before'
+                            )
+                            ->columnSpanFull(),
+
+                        Infolists\Components\TextEntry::make('image_caption')
+                            ->label('')
+                            ->visible(
+                                fn(TheoryContent $record): bool =>
+                                $record->image_url !== null &&
+                                $record->image_position === 'before' &&
+                                $record->image_caption !== null
+                            )
+                            ->columnSpanFull()
+                            ->alignCenter()
+                            ->color('gray')
+                            ->size('sm'),
+
+                        // Contenuto principale
+                        Infolists\Components\TextEntry::make('content')
+                            ->label('')
+                            ->prose()
+                            ->markdown()
+                            ->columnSpanFull(),
+
+                        // Immagine dopo il contenuto (se presente e posizionata dopo)
+                        Infolists\Components\ImageEntry::make('image_url')
+                            ->label('')
+                            ->visible(
+                                fn(TheoryContent $record): bool =>
+                                $record->image_url !== null && $record->image_position === 'after'
+                            )
+                            ->columnSpanFull(),
+
+                        Infolists\Components\TextEntry::make('image_caption')
+                            ->label('')
+                            ->visible(
+                                fn(TheoryContent $record): bool =>
+                                $record->image_url !== null &&
+                                $record->image_position === 'after' &&
+                                $record->image_caption !== null
+                            )
+                            ->columnSpanFull()
+                            ->alignCenter()
+                            ->color('gray')
+                            ->size('sm'),
+                    ]),
+            ]);
     }
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListTheoryContents::route('/'),
-            'create' => Pages\CreateTheoryContent::route('/create'),
-            'edit' => Pages\EditTheoryContent::route('/{record}/edit'),
+            'view' => Pages\ViewTheoryContent::route('/{record}'),
         ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $total = static::getModel()::published()->count();
+        $completed = static::getModel()::published()
+            ->whereHas('currentUserProgress', function ($query) {
+                $query->where('status', 'read');
+            })->count();
+
+        return $completed . '/' . $total;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
     }
 }

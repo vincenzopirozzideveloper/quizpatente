@@ -48,14 +48,21 @@ class TheoryContent extends Model
         return $this->hasMany(Question::class);
     }
 
+    /**
+     * Tutti i progressi degli utenti (per admin)
+     */
     public function userProgress(): HasMany
     {
         return $this->hasMany(UserTheoryProgress::class);
     }
 
+    /**
+     * Relazione con il progresso dell'utente corrente
+     */
     public function currentUserProgress(): HasOne
     {
-        return $this->hasOne(UserTheoryProgress::class)->where('user_id', auth()->id());
+        return $this->hasOne(UserTheoryProgress::class)
+            ->where('user_id', auth()->id());
     }
 
     public function scopePublished($query)
