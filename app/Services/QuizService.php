@@ -1,5 +1,4 @@
 <?php
-// app/Services/QuizService.php
 
 namespace App\Services;
 
@@ -18,19 +17,55 @@ class QuizService
     const MAX_ERRORS_IN_QUIZ = 3;
     
     const QUIZ_TYPE_MINISTERIAL = 'ministerial';
-    const QUIZ_TYPE_MINISTERIAL_MANUAL = 'ministerial_manual';
     const QUIZ_TYPE_TOPIC = 'topic';
     const QUIZ_TYPE_ERRORS_REVIEW = 'errors_review';
+    const QUIZ_TYPE_CUSTOM = 'custom';
     
-    /**
-     * Genera un quiz ministeriale predefinito (senza manuale)
-     */
+    public function canGenerateQuiz(string $type, ?int $topicId = null): array
+    {
+        switch ($type) {
+            case self::QUIZ_TYPE_MINISTERIAL:
+            case 'ministerial_manual':
+                $availableQuestions = Question::active()->withTheory()->count();
+                return [
+                    'can_generate' => $availableQuestions >= self::QUESTIONS_PER_QUIZ,
+                    'message' => $availableQuestions < self::QUESTIONS_PER_QUIZ 
+                        ? "Servono almeno 30 domande. Disponibili: {$availableQuestions}"
+                        : null
+                ];
+                
+            case self::QUIZ_TYPE_TOPIC:
+                if (!$topicId) {
+                    return ['can_generate' => false, 'message' => 'Devi selezionare un argomento'];
+                }
+                $topicQuestions = Question::active()->byTopic($topicId)->withTheory()->count();
+                return [
+                    'can_generate' => $topicQuestions > 0,
+                    'message' => $topicQuestions < self::QUESTIONS_PER_QUIZ
+                        ? "L'argomento ha solo {$topicQuestions} domande. Verranno aggiunte domande casuali."
+                        : null
+                ];
+                
+            case self::QUIZ_TYPE_ERRORS_REVIEW:
+                $errors = UserError::where('user_id', auth()->id())->notMastered()->count();
+                return [
+                    'can_generate' => $errors > 0,
+                    'message' => $errors < self::QUESTIONS_PER_QUIZ
+                        ? "Hai solo {$errors} errori. Verranno aggiunte domande casuali."
+                        : null
+                ];
+                
+            default:
+                return ['can_generate' => false, 'message' => 'Tipo di quiz non valido'];
+        }
+    }
+    
     public function generateMinisterialQuizSession(User $user, int $ministerialQuizId): QuizSession
     {
         $ministerialQuiz = MinisterialQuiz::with('questions')->findOrFail($ministerialQuizId);
         
         if (!$ministerialQuiz->is_valid) {
-            throw new \Exception('Il quiz ministeriale deve avere esattamente 30 domande.');
+            throw new \Exception('Il quiz ministeriale non è valido. Deve avere esattamente 30 domande.');
         }
         
         if (!$ministerialQuiz->is_active) {
@@ -46,197 +81,11 @@ class QuizService
                 'ministerial_quiz_id' => $ministerialQuiz->id,
                 'ministerial_quiz_name' => $ministerialQuiz->name,
                 'max_errors' => $ministerialQuiz->max_errors,
-                'with_manual' => false,
             ],
             $ministerialQuiz->id
         );
     }
     
-    /**
-     * Genera un quiz ministeriale con manuale
-     */
-    public function generateMinisterialQuizWithManual(User $user): QuizSession
-    {
-        // Prendi un quiz ministeriale random valido
-        $ministerialQuiz = MinisterialQuiz::active()
-            ->has('questions', '=', 30)
-            ->inRandomOrder()
-            ->first();
-            
-        if (!$ministerialQuiz) {
-            // Se non ci sono quiz ministeriali, crea un quiz con domande casuali
-            $questions = Question::active()
-                ->withTheory()
-                ->inRandomOrder()
-                ->limit(self::QUESTIONS_PER_QUIZ)
-                ->get();
-                
-            return $this->createQuizSession(
-                $user,
-                self::QUIZ_TYPE_MINISTERIAL_MANUAL,
-                $questions,
-                null,
-                [
-                    'with_manual' => true,
-                    'max_errors' => self::MAX_ERRORS_IN_QUIZ,
-                ]
-            );
-        }
-        
-        return $this->createQuizSession(
-            $user,
-            self::QUIZ_TYPE_MINISTERIAL_MANUAL,
-            $ministerialQuiz->questions,
-            null,
-            [
-                'ministerial_quiz_id' => $ministerialQuiz->id,
-                'ministerial_quiz_name' => $ministerialQuiz->name,
-                'max_errors' => $ministerialQuiz->max_errors,
-                'with_manual' => true,
-            ],
-            $ministerialQuiz->id
-        );
-    }
-    
-    /**
-     * Genera un quiz per argomento (con manuale)
-     */
-    public function generateTopicQuiz(User $user, int $topicId, bool $withManual = true): QuizSession
-    {
-        $topic = Topic::findOrFail($topicId);
-        
-        $questions = Question::query()
-            ->active()
-            ->byTopic($topicId)
-            ->withTheory()
-            ->inRandomOrder()
-            ->limit(self::QUESTIONS_PER_QUIZ)
-            ->get();
-            
-        if ($questions->count() < self::QUESTIONS_PER_QUIZ) {
-            $remainingCount = self::QUESTIONS_PER_QUIZ - $questions->count();
-            $additionalQuestions = Question::query()
-                ->active()
-                ->withTheory()
-                ->whereNotIn('id', $questions->pluck('id'))
-                ->inRandomOrder()
-                ->limit($remainingCount)
-                ->get();
-                
-            $questions = $questions->concat($additionalQuestions);
-        }
-        
-        return $this->createQuizSession(
-            $user,
-            self::QUIZ_TYPE_TOPIC,
-            $questions,
-            $topicId,
-            [
-                'topic_name' => $topic->name,
-                'with_manual' => $withManual,
-            ]
-        );
-    }
-    
-    /**
-     * Genera un quiz basato sugli errori dell'utente
-     */
-    public function generateErrorsReviewQuiz(User $user): QuizSession
-    {
-        $errorQuestionIds = UserError::query()
-            ->where('user_id', $user->id)
-            ->notMastered()
-            ->orderBy('error_count', 'desc')
-            ->limit(self::QUESTIONS_PER_QUIZ)
-            ->pluck('question_id');
-            
-        $questions = Question::query()
-            ->active()
-            ->withTheory()
-            ->whereIn('id', $errorQuestionIds)
-            ->get();
-            
-        if ($questions->count() < self::QUESTIONS_PER_QUIZ) {
-            $remainingCount = self::QUESTIONS_PER_QUIZ - $questions->count();
-            $topicIds = $questions->pluck('topic_id')->unique();
-            
-            $additionalQuestions = Question::query()
-                ->active()
-                ->withTheory()
-                ->whereIn('topic_id', $topicIds)
-                ->whereNotIn('id', $questions->pluck('id'))
-                ->inRandomOrder()
-                ->limit($remainingCount)
-                ->get();
-                
-            if ($questions->count() + $additionalQuestions->count() < self::QUESTIONS_PER_QUIZ) {
-                $stillNeeded = self::QUESTIONS_PER_QUIZ - $questions->count() - $additionalQuestions->count();
-                $randomQuestions = Question::query()
-                    ->active()
-                    ->withTheory()
-                    ->whereNotIn('id', $questions->pluck('id')->concat($additionalQuestions->pluck('id')))
-                    ->inRandomOrder()
-                    ->limit($stillNeeded)
-                    ->get();
-                    
-                $additionalQuestions = $additionalQuestions->concat($randomQuestions);
-            }
-            
-            $questions = $questions->concat($additionalQuestions);
-        }
-        
-        return $this->createQuizSession(
-            $user,
-            self::QUIZ_TYPE_ERRORS_REVIEW,
-            $questions,
-            null,
-            [
-                'error_questions_count' => $errorQuestionIds->count(),
-                'with_manual' => true,
-            ]
-        );
-    }
-    
-    /**
-     * Crea una nuova sessione quiz
-     */
-    protected function createQuizSession(
-        User $user, 
-        string $type, 
-        Collection $questions, 
-        ?int $topicId = null,
-        array $metadata = [],
-        ?int $ministerialQuizId = null
-    ): QuizSession {
-        return DB::transaction(function () use ($user, $type, $questions, $topicId, $metadata, $ministerialQuizId) {
-            $session = QuizSession::create([
-                'user_id' => $user->id,
-                'type' => $type,
-                'topic_id' => $topicId,
-                'ministerial_quiz_id' => $ministerialQuizId,
-                'total_questions' => $questions->count(),
-                'correct_answers' => 0,
-                'wrong_answers' => 0,
-                'unanswered' => $questions->count(),
-                'started_at' => now(),
-                'metadata' => $metadata,
-            ]);
-            
-            $questions->each(function ($question, $index) use ($session) {
-                $session->quizAnswers()->create([
-                    'question_id' => $question->id,
-                    'order' => $index + 1,
-                    'is_correct' => false,
-                ]);
-            });
-            
-            return $session->load('quizAnswers.question.theoryContent');
-        });
-    }
-    
-    /**
-     * Ottiene i quiz ministeriali disponibili
-     */
     public function getAvailableMinisterialQuizzes(User $user): Collection
     {
         return MinisterialQuiz::active()
@@ -265,9 +114,6 @@ class QuizService
             });
     }
     
-    /**
-     * Ottiene la progressione dei quiz ministeriali
-     */
     public function getMinisterialQuizzesProgress(User $user): array
     {
         $totalQuizzes = MinisterialQuiz::active()
@@ -305,16 +151,169 @@ class QuizService
         ];
     }
     
-    /**
-     * Ottiene le statistiche per tipo di quiz
-     */
+    public function generateMinisterialQuiz(User $user, bool $withManual = false): QuizSession
+    {
+        $questions = Question::query()
+            ->active()
+            ->ministerial()
+            ->withTheory()
+            ->inRandomOrder()
+            ->limit(self::QUESTIONS_PER_QUIZ)
+            ->get();
+            
+        if ($questions->count() < self::QUESTIONS_PER_QUIZ) {
+            $remainingCount = self::QUESTIONS_PER_QUIZ - $questions->count();
+            $additionalQuestions = Question::query()
+                ->active()
+                ->withTheory()
+                ->whereNotIn('id', $questions->pluck('id'))
+                ->inRandomOrder()
+                ->limit($remainingCount)
+                ->get();
+                
+            $questions = $questions->concat($additionalQuestions);
+        }
+        
+        return $this->createQuizSession(
+            $user,
+            $withManual ? 'ministerial_manual' : 'ministerial',
+            $questions,
+            null,
+            [
+                'with_manual' => $withManual,
+                'ministerial_name' => 'Quiz Ministeriale Automatico'
+            ]
+        );
+    }
+    
+    public function generateTopicQuiz(User $user, int $topicId): QuizSession
+    {
+        $topic = Topic::findOrFail($topicId);
+        
+        $questions = Question::query()
+            ->active()
+            ->byTopic($topicId)
+            ->withTheory()
+            ->inRandomOrder()
+            ->limit(self::QUESTIONS_PER_QUIZ)
+            ->get();
+            
+        if ($questions->count() < self::QUESTIONS_PER_QUIZ) {
+            $remainingCount = self::QUESTIONS_PER_QUIZ - $questions->count();
+            $additionalQuestions = Question::query()
+                ->active()
+                ->withTheory()
+                ->whereNotIn('id', $questions->pluck('id'))
+                ->inRandomOrder()
+                ->limit($remainingCount)
+                ->get();
+                
+            $questions = $questions->concat($additionalQuestions);
+        }
+        
+        return $this->createQuizSession(
+            $user,
+            self::QUIZ_TYPE_TOPIC,
+            $questions,
+            $topicId,
+            ['topic_name' => $topic->name]
+        );
+    }
+    
+    public function generateErrorsReviewQuiz(User $user): QuizSession
+    {
+        $errorQuestionIds = UserError::query()
+            ->where('user_id', $user->id)
+            ->notMastered()
+            ->orderBy('error_count', 'desc')
+            ->limit(self::QUESTIONS_PER_QUIZ)
+            ->pluck('question_id');
+            
+        $questions = Question::query()
+            ->active()
+            ->withTheory()
+            ->whereIn('id', $errorQuestionIds)
+            ->get();
+            
+        if ($questions->count() < self::QUESTIONS_PER_QUIZ) {
+            $remainingCount = self::QUESTIONS_PER_QUIZ - $questions->count();
+            
+            $topicIds = $questions->pluck('topic_id')->unique();
+            
+            $additionalQuestions = Question::query()
+                ->active()
+                ->withTheory()
+                ->whereIn('topic_id', $topicIds)
+                ->whereNotIn('id', $questions->pluck('id'))
+                ->inRandomOrder()
+                ->limit($remainingCount)
+                ->get();
+                
+            if ($questions->count() + $additionalQuestions->count() < self::QUESTIONS_PER_QUIZ) {
+                $stillNeeded = self::QUESTIONS_PER_QUIZ - $questions->count() - $additionalQuestions->count();
+                $randomQuestions = Question::query()
+                    ->active()
+                    ->withTheory()
+                    ->whereNotIn('id', $questions->pluck('id')->concat($additionalQuestions->pluck('id')))
+                    ->inRandomOrder()
+                    ->limit($stillNeeded)
+                    ->get();
+                    
+                $additionalQuestions = $additionalQuestions->concat($randomQuestions);
+            }
+            
+            $questions = $questions->concat($additionalQuestions);
+        }
+        
+        return $this->createQuizSession(
+            $user,
+            self::QUIZ_TYPE_ERRORS_REVIEW,
+            $questions,
+            null,
+            ['error_questions_count' => $errorQuestionIds->count()]
+        );
+    }
+    
+    protected function createQuizSession(
+        User $user, 
+        string $type, 
+        Collection $questions, 
+        ?int $topicId = null,
+        array $metadata = [],
+        ?int $ministerialQuizId = null
+    ): QuizSession {
+        return DB::transaction(function () use ($user, $type, $questions, $topicId, $metadata, $ministerialQuizId) {
+            $session = QuizSession::create([
+                'user_id' => $user->id,
+                'type' => $type,
+                'topic_id' => $topicId,
+                'ministerial_quiz_id' => $ministerialQuizId,
+                'total_questions' => $questions->count(),
+                'correct_answers' => 0,
+                'wrong_answers' => 0,
+                'unanswered' => $questions->count(),
+                'started_at' => now(),
+                'metadata' => $metadata,
+            ]);
+            
+            $questions->each(function ($question, $index) use ($session) {
+                $session->quizAnswers()->create([
+                    'question_id' => $question->id,
+                    'order' => $index + 1,
+                    'is_correct' => false,
+                ]);
+            });
+            
+            return $session->load('quizAnswers.question.theoryContent');
+        });
+    }
+    
     public function getQuizTypeStats(User $user): array
     {
         $stats = [];
         
-        // Statistiche quiz ministeriali
         $ministerialStats = QuizSession::where('user_id', $user->id)
-            ->whereIn('type', [self::QUIZ_TYPE_MINISTERIAL, self::QUIZ_TYPE_MINISTERIAL_MANUAL])
+            ->where('type', self::QUIZ_TYPE_MINISTERIAL)
             ->completed()
             ->selectRaw('
                 COUNT(*) as total,
@@ -329,6 +328,44 @@ class QuizService
             'passed' => $ministerialStats->passed ?? 0,
             'avg_score' => round($ministerialStats->avg_score ?? 0, 1),
             'best_score' => round($ministerialStats->best_score ?? 0, 1),
+        ];
+        
+        $stats['ministerial'] = array_merge(
+            $stats['ministerial'],
+            $this->getMinisterialQuizzesProgress($user)
+        );
+        
+        $topicStats = QuizSession::where('user_id', $user->id)
+            ->where('type', self::QUIZ_TYPE_TOPIC)
+            ->completed()
+            ->with('topic')
+            ->get()
+            ->groupBy('topic_id');
+            
+        $stats['topics'] = $topicStats->map(function ($sessions, $topicId) {
+            $topic = $sessions->first()->topic;
+            return [
+                'topic_name' => $topic->name ?? 'N/D',
+                'total' => $sessions->count(),
+                'passed' => $sessions->where('is_passed', true)->count(),
+                'avg_score' => round($sessions->avg('score'), 1),
+            ];
+        });
+        
+        $errorReviewStats = QuizSession::where('user_id', $user->id)
+            ->where('type', self::QUIZ_TYPE_ERRORS_REVIEW)
+            ->completed()
+            ->selectRaw('
+                COUNT(*) as total,
+                AVG(score) as avg_score,
+                SUM(correct_answers) as total_corrected
+            ')
+            ->first();
+            
+        $stats['errors_review'] = [
+            'total' => $errorReviewStats->total ?? 0,
+            'avg_score' => round($errorReviewStats->avg_score ?? 0, 1),
+            'total_corrected' => $errorReviewStats->total_corrected ?? 0,
         ];
         
         return $stats;

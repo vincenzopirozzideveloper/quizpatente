@@ -103,14 +103,14 @@
                     </x-filament::button>
                     
                     <x-filament::button 
-                        wire:click="reviewErrors"
-                        color="danger"
-                        class="w-full"
-                        icon="heroicon-o-arrow-path"
-                        outlined
-                    >
-                        Ripassa errori ({{ $stats['errors_to_review'] }})
-                    </x-filament::button>
+                    wire:click="startQuiz"
+                    color="danger"
+                    class="w-full"
+                    icon="heroicon-o-arrow-path"
+                    outlined
+                >
+                    Ripassa errori ({{ $stats['errors_to_review'] }})
+                </x-filament::button>
                 </div>
             </x-filament::card>
         </div>

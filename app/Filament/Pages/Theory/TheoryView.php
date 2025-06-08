@@ -8,6 +8,7 @@ use App\Models\TheoryContent;
 use App\Models\UserTheoryProgress;
 use Livewire\Attributes\Url;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 
 class TheoryView extends Page
 {
@@ -19,20 +20,31 @@ class TheoryView extends Page
     public $topicId;
     
     #[Url]
-    public $subtopicId;
-    
-    #[Url]
     public $contentId;
     
     public $topic;
-    public $subtopics;
-    public $currentSubtopic;
-    public $contents;
+    public Collection $allContents;
     public $currentContent;
-    public $currentContentIndex = 0;
-    public $isSidebarOpen = true;
-    public Collection $userProgress;
-    public $contentStartTime;
+    public $currentIndex = 0;
+    
+    // View state
+    public string $viewMode = 'grid'; // 'grid', 'list', 'focus'
+    public bool $showProgress = true;
+    
+    // Real-time state
+    public array $contentStatuses = [];
+    public array $stats = [
+        'total' => 0,
+        'completed' => 0,
+        'inProgress' => 0,
+        'percentage' => 0
+    ];
+    
+    // Filters
+    public string $filterStatus = 'all'; // 'all', 'unread', 'reading', 'read'
+    public string $searchQuery = '';
+    
+    protected $listeners = ['contentStatusUpdated' => 'refreshStats'];
 
     public function mount(): void
     {
@@ -41,217 +53,241 @@ class TheoryView extends Page
             return;
         }
 
-        $this->topic = Topic::with(['subtopics' => function ($query) {
-            $query->active()
-                  ->ordered()
-                  ->withCount(['theoryContents' => function ($q) {
-                      $q->published();
-                  }]);
-        }])->findOrFail($this->topicId);
-        
-        $this->subtopics = $this->topic->subtopics;
-        
-        // Carica lo stato di lettura dell'utente
+        $this->topic = Topic::findOrFail($this->topicId);
+        $this->loadAllContents();
         $this->loadUserProgress();
         
-        // Se non è specificato un sottoargomento, usa il primo disponibile
-        if (!$this->subtopicId && $this->subtopics->isNotEmpty()) {
-            $this->subtopicId = $this->subtopics->first()->id;
+        // Se non c'è un contentId, trova il primo non letto
+        if (!$this->contentId) {
+            $firstUnread = $this->allContents->first(function ($content) {
+                return ($this->contentStatuses[$content->id] ?? 'unread') !== 'read';
+            });
+            
+            $this->contentId = $firstUnread?->id ?? $this->allContents->first()?->id;
         }
         
-        if ($this->subtopicId) {
-            $this->loadSubtopic($this->subtopicId);
-        }
-    }
-
-    protected function loadUserProgress(): void
-    {
-        $contentIds = TheoryContent::whereIn('subtopic_id', $this->subtopics->pluck('id'))
-            ->published()
-            ->pluck('id');
-            
-        $this->userProgress = UserTheoryProgress::where('user_id', auth()->id())
-            ->whereIn('theory_content_id', $contentIds)
-            ->get()
-            ->keyBy('theory_content_id');
-    }
-
-    public function loadSubtopic($subtopicId): void
-    {
-        $this->subtopicId = $subtopicId;
-        $this->currentSubtopic = $this->subtopics->find($subtopicId);
-        
-        if ($this->currentSubtopic) {
-            $this->contents = $this->currentSubtopic->theoryContents()
-                ->published()
-                ->ordered()
-                ->get();
-            
-            // Se non è specificato un contenuto o non esiste, usa il primo
-            if (!$this->contentId || !$this->contents->contains('id', $this->contentId)) {
-                $this->contentId = $this->contents->first()?->id;
-            }
-            
+        if ($this->contentId) {
             $this->loadContent($this->contentId);
         }
     }
 
-    public function loadContent($contentId): void
+    protected function loadAllContents(): void
     {
-        if (!$contentId) return;
-        
-        // Salva il tempo trascorso sul contenuto precedente
-        if ($this->currentContent && $this->contentStartTime) {
-            $this->updateTimeSpent($this->currentContent->id);
+        $this->allContents = TheoryContent::query()
+            ->whereHas('subtopic', function ($query) {
+                $query->where('topic_id', $this->topicId)
+                      ->where('is_active', true);
+            })
+            ->with(['subtopic'])
+            ->published()
+            ->orderBy('subtopic_id')
+            ->orderBy('order')
+            ->get();
+            
+        $this->stats['total'] = $this->allContents->count();
+    }
+
+    protected function loadUserProgress(): void
+    {
+        $progress = UserTheoryProgress::where('user_id', auth()->id())
+            ->whereIn('theory_content_id', $this->allContents->pluck('id'))
+            ->get()
+            ->keyBy('theory_content_id');
+            
+        foreach ($this->allContents as $content) {
+            $this->contentStatuses[$content->id] = $progress->get($content->id)?->status ?? 'unread';
         }
         
+        $this->calculateStats();
+    }
+
+    protected function calculateStats(): void
+    {
+        $this->stats['completed'] = collect($this->contentStatuses)->where('status', 'read')->count();
+        $this->stats['inProgress'] = collect($this->contentStatuses)->where('status', 'reading')->count();
+        $this->stats['percentage'] = $this->stats['total'] > 0 
+            ? round(($this->stats['completed'] / $this->stats['total']) * 100)
+            : 0;
+    }
+
+    public function loadContent($contentId): void
+    {
         $this->contentId = $contentId;
-        $this->currentContent = $this->contents->find($contentId);
+        $this->currentContent = $this->allContents->find($contentId);
         
         if ($this->currentContent) {
-            $this->currentContentIndex = $this->contents->search(function ($item) use ($contentId) {
+            $this->currentIndex = $this->allContents->search(function ($item) use ($contentId) {
                 return $item->id == $contentId;
             });
             
-            // Marca come "in lettura"
-            UserTheoryProgress::markAsReading(auth()->id(), $contentId);
-            $this->contentStartTime = now();
+            // Marca come in lettura se non è già letto
+            if ($this->contentStatuses[$contentId] === 'unread') {
+                UserTheoryProgress::markAsReading(auth()->id(), $contentId);
+                $this->contentStatuses[$contentId] = 'reading';
+                $this->calculateStats();
+            }
             
-            // Ricarica lo stato di progresso
-            $this->loadUserProgress();
+            // Switch to focus mode when loading content
+            if ($this->viewMode === 'grid') {
+                $this->viewMode = 'focus';
+            }
         }
     }
 
-    public function navigateToContent($contentId): void
+    public function toggleContentStatus($contentId): void
     {
-        $content = TheoryContent::find($contentId);
-        if ($content && $content->subtopic_id !== $this->subtopicId) {
-            $this->loadSubtopic($content->subtopic_id);
+        $currentStatus = $this->contentStatuses[$contentId] ?? 'unread';
+        $newStatus = $currentStatus === 'read' ? 'unread' : 'read';
+        
+        if ($newStatus === 'read') {
+            UserTheoryProgress::markAsRead(auth()->id(), $contentId);
+        } else {
+            UserTheoryProgress::updateOrCreate(
+                [
+                    'user_id' => auth()->id(),
+                    'theory_content_id' => $contentId,
+                ],
+                [
+                    'status' => 'unread',
+                    'completed_at' => null,
+                ]
+            );
         }
-        $this->loadContent($contentId);
+        
+        $this->contentStatuses[$contentId] = $newStatus;
+        $this->calculateStats();
+        
+        // Emit event for real-time updates
+        $this->dispatch('statsUpdated', stats: $this->stats);
     }
 
-    public function toggleContentReadStatus($contentId): void
-    {
-        UserTheoryProgress::toggleReadStatus(auth()->id(), $contentId);
-        $this->loadUserProgress();
-    }
-
-    public function markCurrentAsRead(): void
+    public function markAsComplete(): void
     {
         if ($this->currentContent) {
-            UserTheoryProgress::markAsRead(auth()->id(), $this->currentContent->id);
-            $this->loadUserProgress();
+            $this->toggleContentStatus($this->currentContent->id);
         }
     }
 
     public function nextContent(): void
     {
-        // Marca automaticamente come letto il contenuto corrente
-        $this->markCurrentAsRead();
-        
-        if ($this->currentContentIndex < $this->contents->count() - 1) {
-            $nextContent = $this->contents[$this->currentContentIndex + 1];
-            $this->loadContent($nextContent->id);
-        } else {
-            // Passa al prossimo sottoargomento
-            $currentSubtopicIndex = $this->subtopics->search(function ($item) {
-                return $item->id == $this->subtopicId;
-            });
-            
-            if ($currentSubtopicIndex !== false && $currentSubtopicIndex < $this->subtopics->count() - 1) {
-                $nextSubtopic = $this->subtopics[$currentSubtopicIndex + 1];
-                $this->loadSubtopic($nextSubtopic->id);
+        if ($this->currentIndex < $this->allContents->count() - 1) {
+            // Auto-mark current as read
+            if ($this->currentContent && $this->contentStatuses[$this->currentContent->id] !== 'read') {
+                $this->toggleContentStatus($this->currentContent->id);
             }
+            
+            $next = $this->allContents[$this->currentIndex + 1];
+            $this->loadContent($next->id);
         }
     }
 
     public function previousContent(): void
     {
-        if ($this->currentContentIndex > 0) {
-            $prevContent = $this->contents[$this->currentContentIndex - 1];
-            $this->loadContent($prevContent->id);
-        } else {
-            // Passa al sottoargomento precedente
-            $currentSubtopicIndex = $this->subtopics->search(function ($item) {
-                return $item->id == $this->subtopicId;
+        if ($this->currentIndex > 0) {
+            $prev = $this->allContents[$this->currentIndex - 1];
+            $this->loadContent($prev->id);
+        }
+    }
+
+    public function jumpToContent($contentId): void
+    {
+        $this->loadContent($contentId);
+    }
+
+    public function switchViewMode($mode): void
+    {
+        $this->viewMode = $mode;
+    }
+
+    public function toggleProgress(): void
+    {
+        $this->showProgress = !$this->showProgress;
+    }
+
+    public function filterByStatus($status): void
+    {
+        $this->filterStatus = $status;
+    }
+
+    public function getFilteredContentsProperty(): Collection
+    {
+        $filtered = $this->allContents;
+        
+        // Apply status filter
+        if ($this->filterStatus !== 'all') {
+            $filtered = $filtered->filter(function ($content) {
+                $status = $this->contentStatuses[$content->id] ?? 'unread';
+                return $status === $this->filterStatus;
             });
+        }
+        
+        // Apply search filter
+        if ($this->searchQuery) {
+            $filtered = $filtered->filter(function ($content) {
+                return str_contains(strtolower($content->content), strtolower($this->searchQuery)) ||
+                       str_contains(strtolower($content->code), strtolower($this->searchQuery)) ||
+                       str_contains(strtolower($content->subtopic->title), strtolower($this->searchQuery));
+            });
+        }
+        
+        return $filtered;
+    }
+
+    public function getProgressBySubtopicProperty(): Collection
+    {
+        return $this->allContents->groupBy('subtopic_id')->map(function ($contents, $subtopicId) {
+            $subtopic = $contents->first()->subtopic;
+            $total = $contents->count();
+            $completed = $contents->filter(function ($content) {
+                return ($this->contentStatuses[$content->id] ?? 'unread') === 'read';
+            })->count();
             
-            if ($currentSubtopicIndex !== false && $currentSubtopicIndex > 0) {
-                $prevSubtopic = $this->subtopics[$currentSubtopicIndex - 1];
-                $this->loadSubtopic($prevSubtopic->id);
-                // Vai all'ultimo contenuto del sottoargomento precedente
-                if ($this->contents->isNotEmpty()) {
-                    $this->loadContent($this->contents->last()->id);
-                }
+            return [
+                'id' => $subtopicId,
+                'title' => $subtopic->title,
+                'code' => $subtopic->code,
+                'total' => $total,
+                'completed' => $completed,
+                'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0
+            ];
+        });
+    }
+
+    public function markAllAsRead(): void
+    {
+        foreach ($this->allContents as $content) {
+            if ($this->contentStatuses[$content->id] !== 'read') {
+                UserTheoryProgress::markAsRead(auth()->id(), $content->id);
+                $this->contentStatuses[$content->id] = 'read';
             }
         }
+        
+        $this->calculateStats();
+        $this->dispatch('statsUpdated', stats: $this->stats);
     }
 
-    public function toggleSidebar(): void
+    public function resetProgress(): void
     {
-        $this->isSidebarOpen = !$this->isSidebarOpen;
-    }
-
-    protected function updateTimeSpent($contentId): void
-    {
-        $progress = UserTheoryProgress::where('user_id', auth()->id())
-            ->where('theory_content_id', $contentId)
-            ->first();
+        UserTheoryProgress::where('user_id', auth()->id())
+            ->whereIn('theory_content_id', $this->allContents->pluck('id'))
+            ->delete();
             
-        if ($progress) {
-            $timeSpent = now()->diffInSeconds($this->contentStartTime);
-            $progress->increment('time_spent', $timeSpent);
-        }
-    }
-
-    public function getProgressStats(): array
-    {
-        $totalContents = 0;
-        $readContents = 0;
-        $readingContents = 0;
-        
-        foreach ($this->subtopics as $subtopic) {
-            $totalContents += $subtopic->theory_contents_count;
+        foreach ($this->allContents as $content) {
+            $this->contentStatuses[$content->id] = 'unread';
         }
         
-        $readContents = $this->userProgress->where('status', 'read')->count();
-        $readingContents = $this->userProgress->where('status', 'reading')->count();
-        
-        return [
-            'total' => $totalContents,
-            'read' => $readContents,
-            'reading' => $readingContents,
-            'unread' => $totalContents - $readContents - $readingContents,
-            'percentage' => $totalContents > 0 ? round(($readContents / $totalContents) * 100, 1) : 0,
-        ];
+        $this->calculateStats();
+        $this->dispatch('statsUpdated', stats: $this->stats);
     }
 
-    public function getContentStatus($contentId): string
+    public function backToTopics(): void
     {
-        return $this->userProgress->get($contentId)?->status ?? 'unread';
-    }
-
-    public function getTitle(): string
-    {
-        return $this->topic ? $this->topic->name : 'Teoria';
-    }
-
-    public function backToIndex(): void
-    {
-        // Salva il tempo dell'ultimo contenuto
-        if ($this->currentContent && $this->contentStartTime) {
-            $this->updateTimeSpent($this->currentContent->id);
-        }
-        
         $this->redirect(TheoryIndex::getUrl());
     }
 
-    public function dehydrate(): void
+    #[On('statsUpdated')]
+    public function refreshStats($stats): void
     {
-        // Salva il tempo quando il componente viene distrutto
-        if ($this->currentContent && $this->contentStartTime) {
-            $this->updateTimeSpent($this->currentContent->id);
-        }
+        $this->stats = $stats;
     }
 }

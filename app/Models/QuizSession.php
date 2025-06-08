@@ -56,6 +56,11 @@ class QuizSession extends Model
         return $this->hasMany(QuizAnswer::class);
     }
 
+    public function ministerialQuiz(): BelongsTo
+    {
+        return $this->belongsTo(MinisterialQuiz::class);
+    }
+
     public function scopeCompleted($query)
     {
         return $query->whereNotNull('completed_at');
@@ -70,23 +75,20 @@ class QuizSession extends Model
     {
         return $query->where('is_passed', true);
     }
-
-    public function ministerialQuiz(): BelongsTo
-    {
-        return $this->belongsTo(MinisterialQuiz::class);
-    }
     
-    // Aggiornare il metodo calculateScore per usare max_errors dal quiz ministeriale
     public function calculateScore()
     {
         $this->score = $this->total_questions > 0 
             ? round(($this->correct_answers / $this->total_questions) * 100, 2)
             : 0;
         
-        // Usa il max_errors del quiz ministeriale se presente, altrimenti usa il default
         $maxErrors = $this->metadata['max_errors'] ?? 3;
         
-        $this->is_passed = $this->wrong_answers <= $maxErrors;
+        // Un quiz è superato SOLO se:
+        // 1. Il numero di risposte sbagliate è <= al massimo consentito
+        // 2. Il numero di domande non risposte è <= al massimo consentito
+        $totalErrors = $this->wrong_answers + $this->unanswered;
+        $this->is_passed = $totalErrors <= $maxErrors;
     }
 
     public function getDurationAttribute()

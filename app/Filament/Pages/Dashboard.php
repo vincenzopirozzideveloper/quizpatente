@@ -10,6 +10,7 @@ use App\Models\QuizSession;
 use App\Models\MinisterialQuiz;
 use App\Models\UserTopicProgress;
 use Illuminate\Support\Collection;
+use App\Filament\Pages\Quiz\QuizSelection;
 
 class Dashboard extends Page
 {
@@ -180,11 +181,6 @@ class Dashboard extends Page
 
     public function startQuiz(): void
     {
-        $this->redirect(route('filament.pages.quiz.index'));
-    }
-
-    public function reviewErrors(): void
-    {
-        $this->redirect(route('filament.pages.errors.review'));
+        $this->redirect(QuizSelection::getUrl());
     }
 }
