@@ -70,15 +70,22 @@ class QuizSession extends Model
         return $query->where('is_passed', true);
     }
 
+    public function ministerialQuiz(): BelongsTo
+    {
+        return $this->belongsTo(MinisterialQuiz::class);
+    }
+    
+    // Aggiornare il metodo calculateScore per usare max_errors dal quiz ministeriale
     public function calculateScore()
     {
         $this->score = $this->total_questions > 0 
             ? round(($this->correct_answers / $this->total_questions) * 100, 2)
             : 0;
         
-        $this->is_passed = $this->type === 'ministerial' 
-            ? $this->wrong_answers <= 4 
-            : $this->score >= 80;
+        // Usa il max_errors del quiz ministeriale se presente, altrimenti usa il default
+        $maxErrors = $this->metadata['max_errors'] ?? 3;
+        
+        $this->is_passed = $this->wrong_answers <= $maxErrors;
     }
 
     public function getDurationAttribute()

@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             TopicSeeder::class,
             TheoryContentSeeder::class,
+            SimpleQuestionsSeeder::class,
+            MinisterialQuizSeeder::class,
         ]);
     }
 }

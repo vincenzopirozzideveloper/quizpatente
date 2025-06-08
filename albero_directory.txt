@@ -1,6 +1,7 @@
 .
 ├── albero_directory.txt
 ├── app
+│   ├── DTOs
 │   ├── Filament
 │   │   ├── Pages
 │   │   │   ├── Account
@@ -11,11 +12,30 @@
 │   │   │   ├── Progress
 │   │   │   │   └── MyProgress.php
 │   │   │   ├── Quiz
-│   │   │   │   └── QuizIndex.php
+│   │   │   │   ├── QuizIndex.php
+│   │   │   │   ├── QuizPlay.php
+│   │   │   │   ├── QuizResults.php
+│   │   │   │   └── QuizSelection.php
 │   │   │   └── Theory
 │   │   │       ├── TheoryIndex.php
 │   │   │       └── TheoryView.php
 │   │   └── Resources
+│   │       ├── MinisterialQuizResource
+│   │       │   └── Pages
+│   │       │       ├── CreateMinisterialQuiz.php
+│   │       │       ├── EditMinisterialQuiz.php
+│   │       │       ├── ListMinisterialQuizzes.php
+│   │       │       └── Widgets
+│   │       │           └── MinisterialQuizStatsOverview.php
+│   │       ├── MinisterialQuizResource.php
+│   │       ├── QuestionResource
+│   │       │   ├── Pages
+│   │       │   │   ├── CreateQuestion.php
+│   │       │   │   ├── EditQuestion.php
+│   │       │   │   └── ListQuestions.php
+│   │       │   └── Widgets
+│   │       │       └── QuestionStatsOverview.php
+│   │       ├── QuestionResource.php
 │   │       ├── SubtopicResource
 │   │       │   └── Pages
 │   │       │       ├── CreateSubtopic.php
@@ -41,7 +61,10 @@
 │   ├── Http
 │   │   └── Controllers
 │   │       └── Controller.php
+│   ├── Livewire
+│   │   └── Quiz
 │   ├── Models
+│   │   ├── MinisterialQuiz.php
 │   │   ├── Question.php
 │   │   ├── QuizAnswer.php
 │   │   ├── QuizSession.php
@@ -54,10 +77,12 @@
 │   │   ├── UserTheoryProgress.php
 │   │   ├── UserTopicProgress.php
 │   │   └── VideoExplanation.php
-│   └── Providers
-│       ├── AppServiceProvider.php
-│       └── Filament
-│           └── QuizpatentePanelProvider.php
+│   ├── Providers
+│   │   ├── AppServiceProvider.php
+│   │   └── Filament
+│   │       └── QuizpatentePanelProvider.php
+│   └── Services
+│       └── QuizService.php
 ├── artisan
 ├── bootstrap
 │   ├── app.php
@@ -168,4 +193,4 @@
 │       └── ExampleTest.php
 └── vite.config.js
 
-66 directories, 103 files
+76 directories, 118 files
