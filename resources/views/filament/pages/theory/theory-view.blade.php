@@ -76,20 +76,23 @@
                     </div>
                 </div>
                 
-                {{-- Subtopic Progress Grid --}}
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    @foreach($this->progressBySubtopic as $subtopic)
-                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ $subtopic['code'] }}</span>
-                                <span class="text-xs font-bold text-gray-900 dark:text-white">{{ $subtopic['percentage'] }}%</span>
-                            </div>
-                            <h4 class="text-xs text-gray-700 dark:text-gray-300 truncate mb-2">{{ $subtopic['title'] }}</h4>
-                            <div class="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-300"
-                                     style="width: {{ $subtopic['percentage'] }}%"></div>
-                            </div>
-                        </div>
+                {{-- Content Progress Chips --}}
+                <div class="flex flex-wrap gap-2">
+                    @foreach($contents as $content)
+                        @php
+                            $status = $contentStatuses[$content->id] ?? 'unread';
+                        @endphp
+                        <button wire:click="jumpToContent({{ $content->id }})"
+                                class="px-3 py-1 rounded-full text-xs font-medium transition-all
+                                       {{ $contentId === $content->id 
+                                           ? 'bg-blue-600 text-white' 
+                                           : ($status === 'read' 
+                                               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                               : ($status === 'reading' 
+                                                   ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' 
+                                                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400')) }}">
+                            {{ $content->code }} - {{ Str::limit($content->title, 20) }}
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -183,9 +186,8 @@
                                 <div class="p-4">
                                     <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
                                         <span class="font-mono">{{ $content->code }}</span>
-                                        <span>•</span>
-                                        <span>{{ $content->subtopic->title }}</span>
                                     </div>
+                                    <h3 class="font-semibold text-gray-900 dark:text-white mb-2">{{ $content->title }}</h3>
                                     <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
                                         {{ Str::limit(strip_tags($content->content), 120) }}
                                     </p>
@@ -228,9 +230,9 @@
                                             <div class="flex items-center space-x-2 mb-1">
                                                 <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $content->code }}</span>
                                                 <span class="text-sm text-gray-400">•</span>
-                                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ $content->subtopic->title }}</span>
+                                                <span class="font-medium text-gray-900 dark:text-white">{{ $content->title }}</span>
                                             </div>
-                                            <p class="text-gray-900 dark:text-white font-medium">
+                                            <p class="text-gray-700 dark:text-gray-300">
                                                 {{ Str::limit(strip_tags($content->content), 150) }}
                                             </p>
                                         </div>
@@ -261,7 +263,7 @@
                     <div class="p-4">
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Navigazione Rapida</h3>
                         <div class="space-y-1">
-                            @foreach($allContents as $idx => $content)
+                            @foreach($contents as $idx => $content)
                                 @php
                                     $status = $contentStatuses[$content->id] ?? 'unread';
                                 @endphp
@@ -270,10 +272,10 @@
                                                {{ $contentId === $content->id 
                                                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
                                                    : 'hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-                                    <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $idx + 1 }}</span>
+                                    <span class="text-sm font-mono text-gray-500 dark:text-gray-400">{{ $content->code }}</span>
                                     <div class="flex-1 text-left">
                                         <p class="text-sm {{ $contentId === $content->id ? 'font-medium' : '' }} line-clamp-1">
-                                            {{ Str::limit(strip_tags($content->content), 40) }}
+                                            {{ $content->title }}
                                         </p>
                                     </div>
                                     @if ($status === 'read')
@@ -296,12 +298,13 @@
                                 <div>
                                     <div class="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
                                         <span class="font-mono">{{ $currentContent->code }}</span>
-                                        <x-heroicon-o-chevron-right class="w-4 h-4" />
-                                        <span>{{ $currentContent->subtopic->title }}</span>
                                     </div>
-                                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-                                        Contenuto {{ $currentIndex + 1 }} di {{ $allContents->count() }}
+                                    <h2 class="text-xl font-bold text-gray-900 dark:text-white mt-1">
+                                        {{ $currentContent->title }}
                                     </h2>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                        Contenuto {{ $currentIndex + 1 }} di {{ $contents->count() }}
+                                    </p>
                                 </div>
                                 
                                 <button wire:click="markAsComplete"
@@ -325,9 +328,12 @@
                             <article class="max-w-4xl mx-auto px-8 py-12">
                                 @if ($currentContent->image_url && $currentContent->image_position === 'before')
                                     <figure class="mb-8">
-                                        <img src="{{ Storage::url($currentContent->image_url) }}" 
-                                             alt="{{ $currentContent->image_caption ?? '' }}"
-                                             class="w-full rounded-xl shadow-lg">
+                                        <div class="flex justify-center">
+                                            <img src="{{ Storage::url($currentContent->image_url) }}" 
+                                                 alt="{{ $currentContent->image_caption ?? '' }}"
+                                                 class="max-w-full h-auto max-h-[500px] object-scale-down rounded-xl shadow-lg"
+                                                 style="width: auto; height: auto;">
+                                        </div>
                                         @if ($currentContent->image_caption)
                                             <figcaption class="text-sm text-gray-600 dark:text-gray-400 text-center mt-3 italic">
                                                 {{ $currentContent->image_caption }}
@@ -342,9 +348,12 @@
 
                                 @if ($currentContent->image_url && $currentContent->image_position === 'after')
                                     <figure class="mt-8">
-                                        <img src="{{ Storage::url($currentContent->image_url) }}" 
-                                             alt="{{ $currentContent->image_caption ?? '' }}"
-                                             class="w-full rounded-xl shadow-lg">
+                                        <div class="flex justify-center">
+                                            <img src="{{ Storage::url($currentContent->image_url) }}" 
+                                                 alt="{{ $currentContent->image_caption ?? '' }}"
+                                                 class="max-w-full h-auto max-h-[500px] object-scale-down rounded-xl shadow-lg"
+                                                 style="width: auto; height: auto;">
+                                        </div>
                                         @if ($currentContent->image_caption)
                                             <figcaption class="text-sm text-gray-600 dark:text-gray-400 text-center mt-3 italic">
                                                 {{ $currentContent->image_caption }}
@@ -370,16 +379,16 @@
 
                                 <div class="flex items-center space-x-4">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $currentIndex + 1 }} / {{ $allContents->count() }}
+                                        {{ $currentIndex + 1 }} / {{ $contents->count() }}
                                     </span>
                                 </div>
 
                                 <button wire:click="nextContent"
                                         class="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium
-                                               {{ $currentIndex < $allContents->count() - 1 
+                                               {{ $currentIndex < $contents->count() - 1 
                                                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                                                    : 'bg-gray-50 dark:bg-gray-900 text-gray-400 dark:text-gray-600 cursor-not-allowed' }}"
-                                        {{ $currentIndex === $allContents->count() - 1 ? 'disabled' : '' }}>
+                                        {{ $currentIndex === $contents->count() - 1 ? 'disabled' : '' }}>
                                     <span>Successivo</span>
                                     <x-heroicon-o-arrow-right class="w-5 h-5" />
                                 </button>
@@ -437,6 +446,16 @@
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
         }
+        
+        /* Stili aggiuntivi per gestire le immagini nel contenuto */
+        .prose img {
+            max-height: 500px;
+            width: auto;
+            height: auto;
+            margin-left: auto;
+            margin-right: auto;
+            object-fit: scale-down;
+        }
     </style>
 
     <script>
@@ -447,7 +466,6 @@
                 viewMode: @entangle('viewMode'),
                 
                 init() {
-                    // Initialize stats
                     this.updateProgressBar();
                 },
                 
@@ -457,7 +475,6 @@
                 },
                 
                 updateProgressBar() {
-                    // Force re-render of progress bars
                     this.$nextTick(() => {
                         const progressBars = document.querySelectorAll('[data-progress]');
                         progressBars.forEach(bar => {

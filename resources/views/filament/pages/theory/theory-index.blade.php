@@ -101,10 +101,10 @@
                     
                     {{-- Statistiche --}}
                     <div class="space-y-3 mb-6">
-                        {{-- Sottoargomenti --}}
+                        {{-- Contenuti teorici --}}
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-600 dark:text-gray-400">Definizioni:</span>
-                            <span class="font-medium text-gray-900 dark:text-white">{{ $topic['subtopics_count'] }}</span>
+                            <span class="text-gray-600 dark:text-gray-400">Contenuti teorici:</span>
+                            <span class="font-medium text-gray-900 dark:text-white">{{ $topic['theory_contents_count'] }}</span>
                         </div>
                     </div>
                     

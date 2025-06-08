@@ -2,14 +2,10 @@
 <div class="max-w-4xl mx-auto p-6">
     {{-- Header informazioni --}}
     <div class="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Argomento</h3>
                 <p class="text-gray-900 dark:text-white font-medium">{{ $record->topic->name }}</p>
-            </div>
-            <div>
-                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Sottoargomento</h3>
-                <p class="text-gray-900 dark:text-white font-medium">{{ $record->subtopic->title }}</p>
             </div>
             <div>
                 <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Codice</h3>
@@ -24,7 +20,6 @@
             </div>
         </div>
     </div>
-
     {{-- Contenuto principale --}}
     <div class="prose prose-lg dark:prose-invert max-w-none">
         {{-- Immagine prima del contenuto --}}
@@ -40,12 +35,10 @@
                 @endif
             </figure>
         @endif
-
         {{-- Contenuto testuale --}}
         <div class="content-preview">
             {!! Str::markdown($record->content) !!}
         </div>
-
         {{-- Immagine dopo il contenuto --}}
         @if($record->image_url && $record->image_position === 'after')
             <figure class="mt-8">
@@ -60,7 +53,6 @@
             </figure>
         @endif
     </div>
-
     {{-- Footer con metadati --}}
     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
@@ -77,7 +69,6 @@
         </div>
     </div>
 </div>
-
 <style>
     .content-preview h1, 
     .content-preview h2, 

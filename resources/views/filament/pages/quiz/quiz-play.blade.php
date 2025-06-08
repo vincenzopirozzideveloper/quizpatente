@@ -118,12 +118,12 @@
                 {{-- Domanda --}}
                 <div class="flex-1 overflow-y-auto p-8">
                     <div class="max-w-4xl mx-auto">
-                        {{-- Info Argomento --}}
+                        {{-- Info Argomento e Teoria --}}
                         <div class="mb-6">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 {{ $currentAnswer->question->topic->name }}
-                                @if($currentAnswer->question->subtopic)
-                                    > {{ $currentAnswer->question->subtopic->title }}
+                                @if($currentAnswer->question->theoryContent)
+                                    > {{ $currentAnswer->question->theoryContent->title }}
                                 @endif
                             </p>
                         </div>
@@ -268,8 +268,7 @@
                     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                         <p class="text-sm text-gray-600 dark:text-gray-400">
                             {{ $currentAnswer->question->topic->name }} > 
-                            {{ $currentAnswer->question->subtopic?->title }} > 
-                            {{ $currentAnswer->question->theoryContent->code }}
+                            {{ $currentAnswer->question->theoryContent->code }} - {{ $currentAnswer->question->theoryContent->title }}
                         </p>
                     </div>
                     

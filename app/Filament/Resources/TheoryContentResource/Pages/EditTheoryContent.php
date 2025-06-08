@@ -1,5 +1,4 @@
 <?php
-// File: app/Filament/Resources/TheoryContentResource/Pages/ListTheoryContents.php
 
 namespace App\Filament\Resources\TheoryContentResource\Pages;
 
@@ -40,7 +39,12 @@ class EditTheoryContent extends EditRecord
     
     protected function getRedirectUrl(): string
     {
-        return route('filament.quizpatente.resources.theory-contents.index', ['subtopic' => $this->record->subtopic_id]);
+        // Reindirizza alla lista filtrata per topic
+        if ($this->record->topic_id) {
+            return TheoryContentResource::getUrl('index', ['topic' => $this->record->topic_id]);
+        }
+        
+        return $this->getResource()::getUrl('index');
     }
     
     protected function getSavedNotificationTitle(): ?string

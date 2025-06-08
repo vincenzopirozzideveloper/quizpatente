@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TheoryContentResource\Pages;
 use App\Models\TheoryContent;
 use App\Models\Topic;
-use App\Models\Subtopic;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -40,30 +39,25 @@ class TheoryContentResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('topic_id')
                             ->label('Argomento')
-                            ->options(Topic::query()->pluck('name', 'id'))
+                            ->options(Topic::query()->ordered()->pluck('name', 'id'))
                             ->required()
                             ->searchable()
-                            ->preload()
-                            ->reactive()
-                            ->afterStateUpdated(fn (Forms\Set $set) => $set('subtopic_id', null)),
-                            
-                        Forms\Components\Select::make('subtopic_id')
-                            ->label('Sottoargomento')
-                            ->options(function (Forms\Get $get) {
-                                return Subtopic::query()
-                                    ->where('topic_id', $get('topic_id'))
-                                    ->pluck('title', 'id');
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->disabled(fn (Forms\Get $get): bool => !$get('topic_id')),
+                            ->preload(),
                             
                         Forms\Components\TextInput::make('code')
                             ->label('Codice')
                             ->required()
                             ->maxLength(20)
-                            ->placeholder('es: 1.1.1, 1.1.2...'),
+                            ->placeholder('es: 1.1, 1.2, 2.1...')
+                            ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule, $get) {
+                                return $rule->where('topic_id', $get('topic_id'));
+                            }),
+                            
+                        Forms\Components\TextInput::make('title')
+                            ->label('Titolo')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('es: Strada, Carreggiata, Segnali di pericolo...'),
                             
                         Forms\Components\TextInput::make('order')
                             ->label('Ordine')
@@ -150,14 +144,16 @@ class TheoryContentResource extends Resource
                     ->label('Argomento')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(),
+                    ->badge()
+                    ->color('primary')
+                    ->limit(30),
                     
-                Tables\Columns\TextColumn::make('subtopic.title')
-                    ->label('Sottoargomento')
+                Tables\Columns\TextColumn::make('title')
+                    ->label('Titolo')
                     ->searchable()
                     ->sortable()
-                    ->badge()
-                    ->color('primary'),
+                    ->weight('medium')
+                    ->limit(40),
                     
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Immagine')
@@ -169,7 +165,8 @@ class TheoryContentResource extends Resource
                     ->label('Contenuto')
                     ->limit(50)
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn (string $state): string => strip_tags($state)),
                     
                 Tables\Columns\ToggleColumn::make('is_published')
                     ->label('Pubblicato'),
@@ -183,20 +180,7 @@ class TheoryContentResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('topic_id')
                     ->label('Argomento')
-                    ->options(Topic::query()->pluck('name', 'id'))
-                    ->searchable()
-                    ->preload(),
-                    
-                Tables\Filters\SelectFilter::make('subtopic_id')
-                    ->label('Sottoargomento')
-                    ->options(function () {
-                        return Subtopic::query()
-                            ->with('topic')
-                            ->get()
-                            ->mapWithKeys(function ($subtopic) {
-                                return [$subtopic->id => $subtopic->topic->name . ' - ' . $subtopic->title];
-                            });
-                    })
+                    ->options(Topic::query()->ordered()->pluck('name', 'id'))
                     ->searchable()
                     ->preload(),
                     
@@ -219,15 +203,45 @@ class TheoryContentResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->modalHeading('Visualizza contenuto')
-                    ->modalWidth('7xl'),
+                    ->modalWidth('7xl')
+                    ->modalContent(function (TheoryContent $record) {
+                        return view('filament.resources.theory-content-preview', [
+                            'record' => $record
+                        ]);
+                    }),
                     
                 Tables\Actions\EditAction::make(),
+                
+                Tables\Actions\Action::make('duplicate')
+                    ->label('Duplica')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Duplica contenuto')
+                    ->modalDescription('Vuoi duplicare questo contenuto? Verrà creata una copia.')
+                    ->action(function (TheoryContent $record) {
+                        $newContent = $record->replicate();
+                        $newContent->code = $record->code . '-copia';
+                        $newContent->created_at = now();
+                        $newContent->save();
+                        
+                        \Filament\Notifications\Notification::make()
+                            ->title('Contenuto duplicato')
+                            ->success()
+                            ->send();
+                    }),
                 
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
                     ->modalHeading('Elimina contenuto')
                     ->modalDescription('Sei sicuro di voler eliminare questo contenuto?')
-                    ->modalSubmitActionLabel('Sì, elimina'),
+                    ->modalSubmitActionLabel('Sì, elimina')
+                    ->after(function (TheoryContent $record) {
+                        // Elimina l'immagine se presente
+                        if ($record->image_url && Storage::exists($record->image_url)) {
+                            Storage::delete($record->image_url);
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -254,12 +268,8 @@ class TheoryContentResource extends Resource
                         ->deselectRecordsAfterCompletion(),
                 ]),
             ])
-            ->defaultSort('order')
-            ->reorderable('order')
-            ->modifyQueryUsing(fn (Builder $query) => $query->when(
-                request()->has('subtopic'),
-                fn ($q) => $q->where('subtopic_id', request('subtopic'))
-            ));
+            ->defaultSort('topic_id')
+            ->reorderable('order');
     }
 
     public static function getRelations(): array

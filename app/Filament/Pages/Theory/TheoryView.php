@@ -23,7 +23,7 @@ class TheoryView extends Page
     public $contentId;
     
     public $topic;
-    public Collection $allContents;
+    public Collection $contents;
     public $currentContent;
     public $currentIndex = 0;
     
@@ -54,16 +54,16 @@ class TheoryView extends Page
         }
 
         $this->topic = Topic::findOrFail($this->topicId);
-        $this->loadAllContents();
+        $this->loadContents();
         $this->loadUserProgress();
         
         // Se non c'è un contentId, trova il primo non letto
         if (!$this->contentId) {
-            $firstUnread = $this->allContents->first(function ($content) {
+            $firstUnread = $this->contents->first(function ($content) {
                 return ($this->contentStatuses[$content->id] ?? 'unread') !== 'read';
             });
             
-            $this->contentId = $firstUnread?->id ?? $this->allContents->first()?->id;
+            $this->contentId = $firstUnread?->id ?? $this->contents->first()?->id;
         }
         
         if ($this->contentId) {
@@ -71,30 +71,24 @@ class TheoryView extends Page
         }
     }
 
-    protected function loadAllContents(): void
+    protected function loadContents(): void
     {
-        $this->allContents = TheoryContent::query()
-            ->whereHas('subtopic', function ($query) {
-                $query->where('topic_id', $this->topicId)
-                      ->where('is_active', true);
-            })
-            ->with(['subtopic'])
+        $this->contents = TheoryContent::where('topic_id', $this->topicId)
             ->published()
-            ->orderBy('subtopic_id')
-            ->orderBy('order')
+            ->ordered()
             ->get();
             
-        $this->stats['total'] = $this->allContents->count();
+        $this->stats['total'] = $this->contents->count();
     }
 
     protected function loadUserProgress(): void
     {
         $progress = UserTheoryProgress::where('user_id', auth()->id())
-            ->whereIn('theory_content_id', $this->allContents->pluck('id'))
+            ->whereIn('theory_content_id', $this->contents->pluck('id'))
             ->get()
             ->keyBy('theory_content_id');
             
-        foreach ($this->allContents as $content) {
+        foreach ($this->contents as $content) {
             $this->contentStatuses[$content->id] = $progress->get($content->id)?->status ?? 'unread';
         }
         
@@ -103,8 +97,9 @@ class TheoryView extends Page
 
     protected function calculateStats(): void
     {
-        $this->stats['completed'] = collect($this->contentStatuses)->where('status', 'read')->count();
-        $this->stats['inProgress'] = collect($this->contentStatuses)->where('status', 'reading')->count();
+        $statusCollection = collect($this->contentStatuses);
+        $this->stats['completed'] = $statusCollection->filter(fn($status) => $status === 'read')->count();
+        $this->stats['inProgress'] = $statusCollection->filter(fn($status) => $status === 'reading')->count();
         $this->stats['percentage'] = $this->stats['total'] > 0 
             ? round(($this->stats['completed'] / $this->stats['total']) * 100)
             : 0;
@@ -113,10 +108,10 @@ class TheoryView extends Page
     public function loadContent($contentId): void
     {
         $this->contentId = $contentId;
-        $this->currentContent = $this->allContents->find($contentId);
+        $this->currentContent = $this->contents->find($contentId);
         
         if ($this->currentContent) {
-            $this->currentIndex = $this->allContents->search(function ($item) use ($contentId) {
+            $this->currentIndex = $this->contents->search(function ($item) use ($contentId) {
                 return $item->id == $contentId;
             });
             
@@ -170,13 +165,13 @@ class TheoryView extends Page
 
     public function nextContent(): void
     {
-        if ($this->currentIndex < $this->allContents->count() - 1) {
+        if ($this->currentIndex < $this->contents->count() - 1) {
             // Auto-mark current as read
             if ($this->currentContent && $this->contentStatuses[$this->currentContent->id] !== 'read') {
                 $this->toggleContentStatus($this->currentContent->id);
             }
             
-            $next = $this->allContents[$this->currentIndex + 1];
+            $next = $this->contents[$this->currentIndex + 1];
             $this->loadContent($next->id);
         }
     }
@@ -184,7 +179,7 @@ class TheoryView extends Page
     public function previousContent(): void
     {
         if ($this->currentIndex > 0) {
-            $prev = $this->allContents[$this->currentIndex - 1];
+            $prev = $this->contents[$this->currentIndex - 1];
             $this->loadContent($prev->id);
         }
     }
@@ -211,7 +206,7 @@ class TheoryView extends Page
 
     public function getFilteredContentsProperty(): Collection
     {
-        $filtered = $this->allContents;
+        $filtered = $this->contents;
         
         // Apply status filter
         if ($this->filterStatus !== 'all') {
@@ -226,36 +221,16 @@ class TheoryView extends Page
             $filtered = $filtered->filter(function ($content) {
                 return str_contains(strtolower($content->content), strtolower($this->searchQuery)) ||
                        str_contains(strtolower($content->code), strtolower($this->searchQuery)) ||
-                       str_contains(strtolower($content->subtopic->title), strtolower($this->searchQuery));
+                       str_contains(strtolower($content->title), strtolower($this->searchQuery));
             });
         }
         
         return $filtered;
     }
 
-    public function getProgressBySubtopicProperty(): Collection
-    {
-        return $this->allContents->groupBy('subtopic_id')->map(function ($contents, $subtopicId) {
-            $subtopic = $contents->first()->subtopic;
-            $total = $contents->count();
-            $completed = $contents->filter(function ($content) {
-                return ($this->contentStatuses[$content->id] ?? 'unread') === 'read';
-            })->count();
-            
-            return [
-                'id' => $subtopicId,
-                'title' => $subtopic->title,
-                'code' => $subtopic->code,
-                'total' => $total,
-                'completed' => $completed,
-                'percentage' => $total > 0 ? round(($completed / $total) * 100) : 0
-            ];
-        });
-    }
-
     public function markAllAsRead(): void
     {
-        foreach ($this->allContents as $content) {
+        foreach ($this->contents as $content) {
             if ($this->contentStatuses[$content->id] !== 'read') {
                 UserTheoryProgress::markAsRead(auth()->id(), $content->id);
                 $this->contentStatuses[$content->id] = 'read';
@@ -269,10 +244,10 @@ class TheoryView extends Page
     public function resetProgress(): void
     {
         UserTheoryProgress::where('user_id', auth()->id())
-            ->whereIn('theory_content_id', $this->allContents->pluck('id'))
+            ->whereIn('theory_content_id', $this->contents->pluck('id'))
             ->delete();
             
-        foreach ($this->allContents as $content) {
+        foreach ($this->contents as $content) {
             $this->contentStatuses[$content->id] = 'unread';
         }
         

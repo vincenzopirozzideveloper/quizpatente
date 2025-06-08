@@ -42,7 +42,7 @@ class QuizResults extends Page
                 $query->orderBy('order')
                     ->with([
                         'question' => function ($q) {
-                            $q->with(['topic', 'subtopic']);
+                            $q->with(['topic']);
                         }
                     ]);
             },

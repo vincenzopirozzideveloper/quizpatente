@@ -14,8 +14,8 @@ class TheoryContent extends Model
 
     protected $fillable = [
         'topic_id',
-        'subtopic_id',
         'code',
+        'title',
         'content',
         'media',
         'order',
@@ -23,11 +23,13 @@ class TheoryContent extends Model
         'image_url',
         'image_caption',
         'image_position',
+        'metadata',
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
         'media' => 'array',
+        'metadata' => 'array',
         'order' => 'integer',
     ];
 
@@ -36,9 +38,24 @@ class TheoryContent extends Model
         return $this->belongsTo(Topic::class);
     }
 
-    public function subtopic(): BelongsTo
+    public function theoryContents(): HasMany
     {
-        return $this->belongsTo(Subtopic::class);
+        return $this->hasMany(TheoryContent::class)->orderBy('order');
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
+    }
+
+    public function userProgress(): HasMany
+    {
+        return $this->hasMany(UserTheoryProgress::class);
+    }
+
+    public function currentUserProgress(): HasOne
+    {
+        return $this->hasOne(UserTheoryProgress::class)->where('user_id', auth()->id());
     }
 
     public function scopePublished($query)
@@ -50,13 +67,19 @@ class TheoryContent extends Model
     {
         return $query->orderBy('order')->orderBy('code');
     }
-    public function userProgress(): HasMany
-    {
-        return $this->hasMany(UserTheoryProgress::class, 'theory_content_id');
-    }
 
-    public function currentUserProgress(): HasOne
+    /**
+     * Genera automaticamente il codice basato sull'ordine
+     */
+    public static function generateCode($topicId): string
     {
-        return $this->hasOne(UserTheoryProgress::class, 'theory_content_id')->where('user_id', auth()->id());
+        $topic = Topic::find($topicId);
+        $lastContent = self::where('topic_id', $topicId)
+            ->orderBy('order', 'desc')
+            ->first();
+            
+        $nextNumber = $lastContent ? (intval(substr($lastContent->code, strpos($lastContent->code, '.') + 1)) + 1) : 1;
+        
+        return $topic->code . '.' . $nextNumber;
     }
 }

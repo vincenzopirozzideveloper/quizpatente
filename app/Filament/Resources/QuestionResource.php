@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\QuestionResource\Pages;
 use App\Models\Question;
 use App\Models\Topic;
-use App\Models\Subtopic;
 use App\Models\TheoryContent;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -48,43 +47,32 @@ class QuestionResource extends Resource
                             ->preload()
                             ->reactive()
                             ->afterStateUpdated(function (Forms\Set $set) {
-                                $set('subtopic_id', null);
                                 $set('theory_content_id', null);
                             }),
-                            
-                        Forms\Components\Select::make('subtopic_id')
-                            ->label('Sottoargomento')
-                            ->options(function (Forms\Get $get) {
-                                return Subtopic::query()
-                                    ->where('topic_id', $get('topic_id'))
-                                    ->ordered()
-                                    ->pluck('title', 'id');
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->reactive()
-                            ->afterStateUpdated(fn (Forms\Set $set) => $set('theory_content_id', null))
-                            ->disabled(fn (Forms\Get $get): bool => !$get('topic_id'))
-                            ->helperText('Seleziona prima un argomento'),
                             
                         Forms\Components\Select::make('theory_content_id')
                             ->label('Contenuto Teorico')
                             ->options(function (Forms\Get $get) {
                                 return TheoryContent::query()
-                                    ->where('subtopic_id', $get('subtopic_id'))
+                                    ->where('topic_id', $get('topic_id'))
+                                    ->published()
                                     ->ordered()
                                     ->get()
                                     ->mapWithKeys(function ($content) {
-                                        return [$content->id => $content->code . ' - ' . Str::limit(strip_tags($content->content), 50)];
+                                        $label = $content->code . ' - ' . $content->title;
+                                        if ($content->content) {
+                                            $label .= ' (' . Str::limit(strip_tags($content->content), 30) . ')';
+                                        }
+                                        return [$content->id => $label];
                                     });
                             })
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->disabled(fn (Forms\Get $get): bool => !$get('subtopic_id'))
-                            ->helperText('Seleziona prima un sottoargomento'),
+                            ->disabled(fn (Forms\Get $get): bool => !$get('topic_id'))
+                            ->helperText('Seleziona prima un argomento'),
                     ])
-                    ->columns(3),
+                    ->columns(2),
                     
                 Forms\Components\Section::make('Contenuto Domanda')
                     ->schema([
@@ -181,19 +169,19 @@ class QuestionResource extends Resource
                     ->color('primary')
                     ->limit(20),
                     
-                Tables\Columns\TextColumn::make('subtopic.title')
-                    ->label('Sottoargomento')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable()
-                    ->limit(20),
-                    
                 Tables\Columns\TextColumn::make('theoryContent.code')
                     ->label('Teoria')
                     ->searchable()
                     ->sortable()
                     ->badge()
                     ->color('info'),
+                    
+                Tables\Columns\TextColumn::make('theoryContent.title')
+                    ->label('Contenuto')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable()
+                    ->limit(20),
                     
                 Tables\Columns\TextColumn::make('text')
                     ->label('Domanda')
@@ -256,15 +244,16 @@ class QuestionResource extends Resource
                     ->searchable()
                     ->preload(),
                     
-                Tables\Filters\SelectFilter::make('subtopic_id')
-                    ->label('Sottoargomento')
+                Tables\Filters\SelectFilter::make('theory_content_id')
+                    ->label('Contenuto Teorico')
                     ->options(function () {
-                        return Subtopic::query()
+                        return TheoryContent::query()
                             ->with('topic')
+                            ->published()
                             ->ordered()
                             ->get()
-                            ->mapWithKeys(function ($subtopic) {
-                                return [$subtopic->id => $subtopic->topic->name . ' - ' . $subtopic->title];
+                            ->mapWithKeys(function ($content) {
+                                return [$content->id => $content->topic->name . ' - ' . $content->code . ' ' . $content->title];
                             });
                     })
                     ->searchable()
@@ -298,6 +287,16 @@ class QuestionResource extends Resource
                     ->queries(
                         true: fn (Builder $query) => $query->whereNotNull('image_url'),
                         false: fn (Builder $query) => $query->whereNull('image_url'),
+                    ),
+                    
+                Tables\Filters\TernaryFilter::make('has_theory')
+                    ->label('Teoria collegata')
+                    ->placeholder('Tutte')
+                    ->trueLabel('Con teoria')
+                    ->falseLabel('Senza teoria')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('theory_content_id'),
+                        false: fn (Builder $query) => $query->whereNull('theory_content_id'),
                     ),
             ])
             ->actions([

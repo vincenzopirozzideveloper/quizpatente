@@ -6,7 +6,6 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Question;
 use App\Models\Topic;
-use App\Models\Subtopic;
 use App\Models\TheoryContent;
 
 class SimpleQuestionsSeeder extends Seeder
@@ -18,16 +17,20 @@ class SimpleQuestionsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Trova il primo topic con subtopics e theory contents
-        $topic = Topic::with(['subtopics.theoryContents'])->first();
+        // Trova il primo topic con theory contents
+        $topic = Topic::with(['theoryContents'])->first();
         
         if (!$topic) {
             $this->command->error('Nessun topic trovato. Esegui prima i seeder base.');
             return;
         }
         
-        $subtopic = $topic->subtopics->first();
-        $theoryContent = $subtopic->theoryContents->first();
+        $theoryContent = $topic->theoryContents->first();
+        
+        if (!$theoryContent) {
+            $this->command->error('Nessun contenuto teorico trovato. Esegui prima i seeder base.');
+            return;
+        }
         
         $questions = [
             // DEFINIZIONI STRADALI (10 domande)
@@ -73,7 +76,6 @@ class SimpleQuestionsSeeder extends Seeder
         foreach ($questions as $index => $questionData) {
             Question::create([
                 'topic_id' => $topic->id,
-                'subtopic_id' => $subtopic->id,
                 'theory_content_id' => $theoryContent->id,
                 'text' => $questionData['text'],
                 'correct_answer' => $questionData['correct_answer'],

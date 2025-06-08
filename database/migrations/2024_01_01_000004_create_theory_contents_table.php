@@ -10,24 +10,24 @@ return new class extends Migration
     {
         Schema::create('theory_contents', function (Blueprint $table) {
             $table->id();
-
             $table->foreignId('topic_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('subtopic_id')->nullable()->constrained()->cascadeOnDelete();
-
-            $table->string('code')->nullable(); // es: "1.1.1"
-
+            
+            $table->string('code')->nullable(); // es: "1.1", "1.2"
+            $table->string('title'); // es: "Strada", "Carreggiata"
+            
             $table->longText('content');
             $table->json('media')->nullable();
-
+            
             $table->string('image_url')->nullable();
             $table->string('image_caption')->nullable();
             $table->enum('image_position', ['before', 'after'])->default('before');
-
+            $table->json('metadata')->nullable();
             $table->integer('order')->default(0);
             $table->boolean('is_published')->default(true);
             $table->timestamps();
-
+            
             $table->index(['topic_id', 'order']);
+            $table->unique(['topic_id', 'code']);
         });
     }
 

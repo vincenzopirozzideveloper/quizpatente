@@ -1,37 +1,35 @@
 <?php
-// File: app/Filament/Resources/TheoryContentResource/Pages/ListTheoryContents.php
 
 namespace App\Filament\Resources\TheoryContentResource\Pages;
 
 use App\Filament\Resources\TheoryContentResource;
-use App\Models\Subtopic;
+use App\Models\Topic;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateTheoryContent extends CreateRecord
 {
     protected static string $resource = TheoryContentResource::class;
 
-    public ?Subtopic $subtopic = null;
+    public ?Topic $topic = null;
 
     public function mount(): void
     {
         parent::mount();
 
-        if (request()->has('subtopic')) {
-            /** @var Subtopic|null $subtopic */
-            $subtopic = Subtopic::with('topic')->find(request('subtopic'));
-            $this->subtopic = $subtopic;
+        if (request()->has('topic')) {
+            /** @var Topic|null $topic */
+            $topic = Topic::find(request('topic'));
+            $this->topic = $topic;
             $this->form->fill([
-                'subtopic_id' => $this->subtopic->id,
-                'topic_id' => $this->subtopic->topic_id,
+                'topic_id' => $this->topic->id,
             ]);
         }
     }
 
     protected function getRedirectUrl(): string
     {
-        if ($this->subtopic) {
-            return route('filament.quizpatente.resources.theory-contents.index', ['subtopic' => $this->subtopic->id]);
+        if ($this->topic) {
+            return TheoryContentResource::getUrl('index', ['topic' => $this->topic->id]);
         }
 
         return $this->getResource()::getUrl('index');
@@ -46,14 +44,24 @@ class CreateTheoryContent extends CreateRecord
     {
         // Calcola automaticamente l'ordine se non specificato
         if (!isset($data['order']) || $data['order'] === null) {
-            $data['order'] = \App\Models\TheoryContent::where('subtopic_id', $data['subtopic_id'])->max('order') + 1;
+            $data['order'] = \App\Models\TheoryContent::where('topic_id', $data['topic_id'])->max('order') + 1 ?? 0;
         }
 
         // Se non c'è un codice, generalo automaticamente
         if (!isset($data['code']) || empty($data['code'])) {
-            $subtopic = \App\Models\Subtopic::find($data['subtopic_id']);
-            $nextNumber = \App\Models\TheoryContent::where('subtopic_id', $data['subtopic_id'])->count() + 1;
-            $data['code'] = $subtopic->code . '.' . $nextNumber;
+            $topic = \App\Models\Topic::find($data['topic_id']);
+            $existingCodes = \App\Models\TheoryContent::where('topic_id', $data['topic_id'])
+                ->pluck('code')
+                ->toArray();
+            
+            // Genera un codice progressivo per il topic
+            $nextNumber = 1;
+            do {
+                $proposedCode = $topic->code . '.' . $nextNumber;
+                $nextNumber++;
+            } while (in_array($proposedCode, $existingCodes));
+            
+            $data['code'] = $proposedCode;
         }
 
         return $data;

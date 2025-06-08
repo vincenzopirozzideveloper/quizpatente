@@ -1,16 +1,11 @@
 .
 ├── albero_directory.txt
 ├── app
-│   ├── DTOs
 │   ├── Filament
 │   │   ├── Pages
 │   │   │   ├── Account
 │   │   │   │   └── Settings.php
 │   │   │   ├── Dashboard.php
-│   │   │   ├── Errors
-│   │   │   │   └── ReviewErrors.php
-│   │   │   ├── Progress
-│   │   │   │   └── MyProgress.php
 │   │   │   ├── Quiz
 │   │   │   │   ├── QuizIndex.php
 │   │   │   │   ├── QuizPlay.php
@@ -21,12 +16,12 @@
 │   │   │       └── TheoryView.php
 │   │   └── Resources
 │   │       ├── MinisterialQuizResource
-│   │       │   └── Pages
-│   │       │       ├── CreateMinisterialQuiz.php
-│   │       │       ├── EditMinisterialQuiz.php
-│   │       │       ├── ListMinisterialQuizzes.php
-│   │       │       └── Widgets
-│   │       │           └── MinisterialQuizStatsOverview.php
+│   │       │   ├── Pages
+│   │       │   │   ├── CreateMinisterialQuiz.php
+│   │       │   │   ├── EditMinisterialQuiz.php
+│   │       │   │   └── ListMinisterialQuizzes.php
+│   │       │   └── Widgets
+│   │       │       └── MinisterialQuizStatsOverview.php
 │   │       ├── MinisterialQuizResource.php
 │   │       ├── QuestionResource
 │   │       │   ├── Pages
@@ -36,12 +31,6 @@
 │   │       │   └── Widgets
 │   │       │       └── QuestionStatsOverview.php
 │   │       ├── QuestionResource.php
-│   │       ├── SubtopicResource
-│   │       │   └── Pages
-│   │       │       ├── CreateSubtopic.php
-│   │       │       ├── EditSubtopic.php
-│   │       │       └── ListSubtopics.php
-│   │       ├── SubtopicResource.php
 │   │       ├── TheoryContentResource
 │   │       │   └── Pages
 │   │       │       ├── CreateTheoryContent.php
@@ -53,8 +42,6 @@
 │   │       │   │   ├── CreateTopic.php
 │   │       │   │   ├── EditTopic.php
 │   │       │   │   └── ListTopics.php
-│   │       │   ├── RelationManagers
-│   │       │   │   └── SubtopicsRelationManager.php
 │   │       │   └── Widgets
 │   │       │       └── TopicStatsOverview.php
 │   │       └── TopicResource.php
@@ -68,7 +55,6 @@
 │   │   ├── Question.php
 │   │   ├── QuizAnswer.php
 │   │   ├── QuizSession.php
-│   │   ├── Subtopic.php
 │   │   ├── TheoryContent.php
 │   │   ├── Topic.php
 │   │   ├── UserError.php
@@ -106,6 +92,7 @@
 │   ├── services.php
 │   └── session.php
 ├── package.json
+├── package-lock.json
 ├── phpunit.xml
 ├── public
 │   ├── css
@@ -176,11 +163,12 @@
 │   │       ├── 01JX0ZQXYEKE8A9G1HC4GPG8AA.jpg
 │   │       ├── 01JX4XDDMNJ6YR9SN1P7T0E8XG.jpg
 │   │       └── theory-images
-│   │           └── 01JX580FXXNEN2ZE8K3T2YRDNY.jpg
+│   │           ├── 01JX580FXXNEN2ZE8K3T2YRDNY.jpg
+│   │           ├── 01JX8344KSH0VYW5FBK8V919DW.svg
+│   │           └── 01JX83HH1NSCR4HEFSR0ZG4ZSQ.png
 │   ├── framework
 │   │   ├── cache
-│   │   │   ├── data
-│   │   │   └── facade-1e06026dbe325cba543b2306bd7e55d66d31e4c1.php
+│   │   │   └── data
 │   │   ├── sessions
 │   │   └── testing
 │   └── logs
@@ -193,4 +181,4 @@
 │       └── ExampleTest.php
 └── vite.config.js
 
-76 directories, 118 files
+70 directories, 112 files

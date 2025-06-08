@@ -1,10 +1,9 @@
 <?php
-// File: app/Filament/Resources/TheoryContentResource/Pages/ListTheoryContents.php
 
 namespace App\Filament\Resources\TheoryContentResource\Pages;
 
 use App\Filament\Resources\TheoryContentResource;
-use App\Models\Subtopic;
+use App\Models\Topic;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -12,16 +11,16 @@ class ListTheoryContents extends ListRecords
 {
     protected static string $resource = TheoryContentResource::class;
 
-    public ?Subtopic $subtopic = null;
+    public ?Topic $topic = null;
 
     public function mount(): void
     {
         parent::mount();
 
-        if (request()->has('subtopic')) {
-            /** @var Subtopic|null $subtopic */
-            $subtopic = Subtopic::with('topic')->find(request('subtopic'));
-            $this->subtopic = $subtopic;
+        if (request()->has('topic')) {
+            /** @var Topic|null $topic */
+            $topic = Topic::find(request('topic'));
+            $this->topic = $topic;
         }
     }
 
@@ -30,19 +29,19 @@ class ListTheoryContents extends ListRecords
         $actions = [
             Actions\CreateAction::make()
                 ->label('Nuovo Contenuto')
-                ->url(fn() => $this->subtopic
-                    ? route('filament.quizpatente.resources.theory-contents.create', ['subtopic' => $this->subtopic->id])
-                    : route('filament.quizpatente.resources.theory-contents.create')),
+                ->url(fn() => $this->topic
+                    ? TheoryContentResource::getUrl('create', ['topic' => $this->topic->id])
+                    : TheoryContentResource::getUrl('create')),
         ];
 
-        if ($this->subtopic) {
+        if ($this->topic) {
             array_unshift(
                 $actions,
                 Actions\Action::make('back')
-                    ->label('Torna ai sottoargomenti')
+                    ->label('Torna agli argomenti')
                     ->icon('heroicon-o-arrow-left')
                     ->color('gray')
-                    ->url(route('filament.quizpatente.resources.subtopics.index', ['topic' => $this->subtopic->topic_id]))
+                    ->url(\App\Filament\Resources\TopicResource::getUrl('index'))
             );
         }
 
@@ -51,10 +50,21 @@ class ListTheoryContents extends ListRecords
 
     public function getHeading(): string
     {
-        if ($this->subtopic) {
-            return "Contenuti di: {$this->subtopic->topic->name} - {$this->subtopic->title}";
+        if ($this->topic) {
+            return "Contenuti di: {$this->topic->name}";
         }
 
         return 'Contenuti Teoria';
+    }
+
+    protected function getTableQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getTableQuery();
+
+        if ($this->topic) {
+            $query->where('topic_id', $this->topic->id);
+        }
+
+        return $query;
     }
 }

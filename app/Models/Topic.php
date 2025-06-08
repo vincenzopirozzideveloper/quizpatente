@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -60,15 +59,29 @@ class Topic extends Model
 
     public function getCompletionPercentageAttribute(): float
     {
-        if ($this->total_questions === 0)
-            return 0;
+        if ($this->total_questions === 0) return 0;
 
         $completed = $this->userProgress?->completed_questions ?? 0;
         return round(($completed / $this->total_questions) * 100, 1);
     }
-
-    public function subtopics(): HasMany
+    
+    /**
+     * Ottieni il progresso teoria per questo topic
+     */
+    public function getTheoryProgressAttribute(): array
     {
-        return $this->hasMany(Subtopic::class)->orderBy('order');
+        $contents = $this->theoryContents()->published()->pluck('id');
+        $progress = UserTheoryProgress::where('user_id', auth()->id())
+            ->whereIn('theory_content_id', $contents)
+            ->get();
+            
+        return [
+            'total' => $contents->count(),
+            'read' => $progress->where('status', 'read')->count(),
+            'reading' => $progress->where('status', 'reading')->count(),
+            'percentage' => $contents->count() > 0 
+                ? round(($progress->where('status', 'read')->count() / $contents->count()) * 100)
+                : 0
+        ];
     }
 }

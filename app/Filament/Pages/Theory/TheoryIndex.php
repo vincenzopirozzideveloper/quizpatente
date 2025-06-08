@@ -30,16 +30,21 @@ class TheoryIndex extends Page
             'userProgress' => function ($query) {
                 $query->where('user_id', auth()->id());
             },
-            'subtopics' => function ($query) {
-                $query->active()->ordered();
+            'theoryContents' => function ($query) {
+                $query->published()->ordered();
             }
         ])
+        ->withCount(['theoryContents' => function ($query) {
+            $query->published();
+        }])
         ->active()
         ->ordered()
         ->get()
         ->map(function ($topic) {
             $progress = $topic->userProgress;
-            $subtopicsCount = $topic->subtopics->count();
+            
+            // Calcola il progresso della teoria
+            $theoryProgress = $this->calculateTheoryProgress($topic);
             
             return [
                 'id' => $topic->id,
@@ -48,7 +53,9 @@ class TheoryIndex extends Page
                 'description' => $topic->description,
                 'icon' => $topic->icon ?? 'heroicon-o-book-open',
                 'total_questions' => $topic->total_questions,
-                'subtopics_count' => $subtopicsCount,
+                'theory_contents_count' => $topic->theory_contents_count,
+                'theory_contents_read' => $theoryProgress['read'],
+                'theory_progress_percentage' => $theoryProgress['percentage'],
                 'completed_questions' => $progress?->completed_questions ?? 0,
                 'percentage' => $topic->completion_percentage,
                 'accuracy_rate' => $progress?->accuracy_rate ?? 0,
@@ -56,6 +63,30 @@ class TheoryIndex extends Page
                 'is_completed' => $progress?->completed_at !== null,
             ];
         });
+    }
+
+    protected function calculateTheoryProgress($topic): array
+    {
+        $totalContents = $topic->theory_contents_count;
+        $readContents = 0;
+        
+        if ($totalContents > 0) {
+            // Conta i contenuti letti dall'utente
+            $readContents = $topic->theoryContents()
+                ->whereHas('userProgress', function ($query) {
+                    $query->where('user_id', auth()->id())
+                          ->where('status', 'read');
+                })
+                ->count();
+        }
+        
+        return [
+            'read' => $readContents,
+            'total' => $totalContents,
+            'percentage' => $totalContents > 0 
+                ? round(($readContents / $totalContents) * 100, 1) 
+                : 0
+        ];
     }
 
     protected function loadStatistics(): void
@@ -71,12 +102,21 @@ class TheoryIndex extends Page
         $totalQuestions = $this->topics->sum('total_questions');
         $completedQuestions = $this->topics->sum('completed_questions');
         
+        // Aggiungi statistiche sui contenuti teorici
+        $totalTheoryContents = $this->topics->sum('theory_contents_count');
+        $readTheoryContents = $this->topics->sum('theory_contents_read');
+        
         $this->statistics = [
             'total_topics' => $totalTopics,
             'completed_topics' => $completedTopics,
             'total_progress' => $totalProgress,
             'total_questions' => $totalQuestions,
             'completed_questions' => $completedQuestions,
+            'total_theory_contents' => $totalTheoryContents,
+            'read_theory_contents' => $readTheoryContents,
+            'theory_progress' => $totalTheoryContents > 0 
+                ? round(($readTheoryContents / $totalTheoryContents) * 100) 
+                : 0,
         ];
     }
 

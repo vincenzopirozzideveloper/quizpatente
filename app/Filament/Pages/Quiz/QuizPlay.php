@@ -49,7 +49,6 @@ class QuizPlay extends Page
                 $query->orderBy('order');
             },
             'quizAnswers.question.topic',
-            'quizAnswers.question.subtopic',
             'quizAnswers.question.theoryContent',
         ])->findOrFail($this->session);
 

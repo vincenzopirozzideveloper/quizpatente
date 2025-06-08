@@ -3,9 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\TopicResource\Pages;
-use App\Filament\Resources\TopicResource\RelationManagers;
 use App\Models\Topic;
-use App\Models\Category;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -63,15 +61,22 @@ class TopicResource extends Resource
                                 'heroicon-o-information-circle' => 'Informazione',
                                 'heroicon-o-light-bulb' => 'Segnali luminosi',
                                 'heroicon-o-user-group' => 'Agenti del traffico',
+                                'heroicon-o-truck' => 'Veicoli',
+                                'heroicon-o-shield-check' => 'Sicurezza',
+                                'heroicon-o-scale' => 'Norme legali',
+                                'heroicon-o-globe-alt' => 'Ambiente',
+                                'heroicon-o-cog-6-tooth' => 'Manutenzione',
                             ])
-                            ->searchable(),
+                            ->searchable()
+                            ->default('heroicon-o-book-open'),
                             
                         Forms\Components\TextInput::make('total_questions')
                             ->label('Totale domande')
                             ->numeric()
                             ->default(0)
                             ->minValue(0)
-                            ->disabled(),
+                            ->disabled()
+                            ->helperText('Calcolato automaticamente in base alle domande associate'),
                             
                         Forms\Components\TextInput::make('order')
                             ->label('Ordine')
@@ -113,18 +118,22 @@ class TopicResource extends Resource
                     ->label('Nome')
                     ->searchable()
                     ->sortable()
-                    ->description(fn (Topic $record): string => $record->description ?? ''),
+                    ->description(fn (Topic $record): string => $record->description ?? '')
+                    ->wrap(),
                     
-                Tables\Columns\TextColumn::make('subtopics_count')
-                    ->label('Sottoargomenti')
-                    ->counts('subtopics')
+                Tables\Columns\TextColumn::make('theoryContents_count')
+                    ->label('Contenuti')
+                    ->counts(['theoryContents' => function ($query) {
+                        $query->published();
+                    }])
                     ->badge()
-                    ->color('success'),
+                    ->color('info'),
                     
                 Tables\Columns\TextColumn::make('total_questions')
                     ->label('Domande')
                     ->badge()
-                    ->color('warning'),
+                    ->color('warning')
+                    ->formatStateUsing(fn ($state) => $state ?: '0'),
                     
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('Attivo'),
@@ -136,30 +145,71 @@ class TopicResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                    
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Stato')
                     ->placeholder('Tutti')
                     ->trueLabel('Attivi')
                     ->falseLabel('Non attivi'),
+                    
+                Tables\Filters\TernaryFilter::make('has_content')
+                    ->label('Contenuti')
+                    ->placeholder('Tutti')
+                    ->trueLabel('Con contenuti')
+                    ->falseLabel('Senza contenuti')
+                    ->queries(
+                        true: fn ($query) => $query->has('theoryContents'),
+                        false: fn ($query) => $query->doesntHave('theoryContents'),
+                    ),
+                    
+                Tables\Filters\TernaryFilter::make('has_questions')
+                    ->label('Domande')
+                    ->placeholder('Tutti')
+                    ->trueLabel('Con domande')
+                    ->falseLabel('Senza domande')
+                    ->queries(
+                        true: fn ($query) => $query->where('total_questions', '>', 0),
+                        false: fn ($query) => $query->where('total_questions', 0),
+                    ),
             ])
             ->actions([
                 Tables\Actions\Action::make('manage_content')
                     ->label('Gestisci contenuti')
                     ->icon('heroicon-o-document-text')
                     ->color('primary')
-                    ->url(fn (Topic $record): string => route('filament.quizpatente.resources.subtopics.index', ['topic' => $record->id])),
+                    ->url(fn (Topic $record): string => TheoryContentResource::getUrl('index', ['topic' => $record->id])),
+                    
+                Tables\Actions\Action::make('view_questions')
+                    ->label('Vedi domande')
+                    ->icon('heroicon-o-question-mark-circle')
+                    ->color('info')
+                    ->url(fn (Topic $record): string => QuestionResource::getUrl('index', ['tableFilters' => ['topic_id' => ['value' => $record->id]]])),
                     
                 Tables\Actions\EditAction::make(),
                 
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
                     ->modalHeading('Elimina argomento')
-                    ->modalDescription('Sei sicuro di voler eliminare questo argomento? Verranno eliminati anche tutti i sottoargomenti e contenuti associati.')
+                    ->modalDescription('Sei sicuro di voler eliminare questo argomento? Verranno eliminati anche tutti i contenuti teorici e le domande associate.')
                     ->modalSubmitActionLabel('Sì, elimina'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('activate')
+                        ->label('Attiva selezionati')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(fn ($records) => $records->each->update(['is_active' => true]))
+                        ->deselectRecordsAfterCompletion(),
+                        
+                    Tables\Actions\BulkAction::make('deactivate')
+                        ->label('Disattiva selezionati')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->action(fn ($records) => $records->each->update(['is_active' => false]))
+                        ->deselectRecordsAfterCompletion(),
+                        
                     Tables\Actions\DeleteBulkAction::make()
                         ->requiresConfirmation()
                         ->modalHeading('Elimina argomenti selezionati')
@@ -174,7 +224,7 @@ class TopicResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\SubtopicsRelationManager::class,
+            // Relazioni rimosse
         ];
     }
 

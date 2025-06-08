@@ -14,7 +14,6 @@ class Question extends Model
 
     protected $fillable = [
         'topic_id',
-        'subtopic_id',
         'theory_content_id',
         'text',
         'correct_answer',
@@ -43,14 +42,6 @@ class Question extends Model
     public function topic(): BelongsTo
     {
         return $this->belongsTo(Topic::class);
-    }
-
-    /**
-     * Relazione con il subtopic
-     */
-    public function subtopic(): BelongsTo
-    {
-        return $this->belongsTo(Subtopic::class);
     }
 
     /**
@@ -126,14 +117,6 @@ class Question extends Model
     }
 
     /**
-     * Scope per domande per subtopic
-     */
-    public function scopeBySubtopic($query, $subtopicId)
-    {
-        return $query->where('subtopic_id', $subtopicId);
-    }
-
-    /**
      * Scope per domande con teoria associata
      */
     public function scopeWithTheory($query)
@@ -163,7 +146,7 @@ class Question extends Model
     }
 
     /**
-     * Ottiene il percorso completo della teoria (Topic > Subtopic > Theory)
+     * Ottiene il percorso completo della teoria (Topic > Theory)
      */
     public function getTheoryPathAttribute(): string
     {
@@ -173,12 +156,8 @@ class Question extends Model
             $path[] = $this->topic->name;
         }
         
-        if ($this->subtopic) {
-            $path[] = $this->subtopic->title;
-        }
-        
         if ($this->theoryContent) {
-            $path[] = $this->theoryContent->code;
+            $path[] = $this->theoryContent->title;
         }
         
         return implode(' > ', $path);

@@ -55,36 +55,6 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Progressi Settimanali --}}
-        <div class="lg:col-span-2">
-            <x-filament::card>
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Attività ultimi 7 giorni</h3>
-                </div>
-                <div class="space-y-4">
-                    @foreach($weeklyProgress as $day)
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    {{ $day['day'] }} ({{ $day['date'] }})
-                                </span>
-                                <span class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ $day['questions'] }} domande
-                                </span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                @if($day['questions'] > 0)
-                                    <div class="bg-primary-600 h-2.5 rounded-full" 
-                                         style="width: {{ min(100, ($day['correct'] / $day['questions']) * 100) }}%"></div>
-                                @else
-                                    <div class="bg-gray-300 dark:bg-gray-600 h-2.5 rounded-full" style="width: 0%"></div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </x-filament::card>
-        </div>
 
         {{-- Azioni Rapide --}}
         <div>
@@ -115,38 +85,6 @@
             </x-filament::card>
         </div>
     </div>
-
-    {{-- Progressi per Argomento --}}
-    <x-filament::card class="mt-6">
-        <div class="mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Progressi recenti per argomento</h3>
-        </div>
-        <div class="space-y-4">
-            @foreach($recentTopics as $topic)
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-2xl">{{ $topic['icon'] }}</span>
-                            <div>
-                                <p class="font-medium text-gray-900 dark:text-white">
-                                    {{ $topic['code'] }} - {{ $topic['name'] }}
-                                </p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ $topic['completed_questions'] }} su {{ $topic['total_questions'] }} completati
-                                </p>
-                            </div>
-                        </div>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ $topic['percentage'] }}%
-                        </span>
-                    </div>
-                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: {{ $topic['percentage'] }}%"></div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </x-filament::card>
 
     {{-- Errori Frequenti --}}
     @if($recentErrors->count() > 0)
