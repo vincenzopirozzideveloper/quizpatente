@@ -1,3 +1,4 @@
+{{-- resources/views/filament/pages/quiz/quiz-results.blade.php --}}
 <x-filament-panels::page>
     <div class="space-y-8">
         {{-- Header Risultati --}}
@@ -7,18 +8,16 @@
                     <x-heroicon-o-check-circle class="w-16 h-16 text-green-600 dark:text-green-400" />
                 </div>
                 <h1 class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">Quiz Superato!</h1>
-                <p class="text-lg text-gray-600 dark:text-gray-400">
-                    Complimenti! Hai superato il quiz con successo.
-                </p>
             @else
                 <div class="inline-flex items-center justify-center w-24 h-24 bg-red-100 dark:bg-red-900/20 rounded-full mb-6">
                     <x-heroicon-o-x-circle class="w-16 h-16 text-red-600 dark:text-red-400" />
                 </div>
                 <h1 class="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">Quiz Non Superato</h1>
-                <p class="text-lg text-gray-600 dark:text-gray-400">
-                    Non ti preoccupare, continua a studiare e riprova!
-                </p>
             @endif
+            
+            <p class="text-lg text-gray-600 dark:text-gray-400">
+                {{ $this->getCompletionMessage() }}
+            </p>
         </div>
 
         {{-- Statistiche Principali --}}
@@ -57,21 +56,15 @@
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Riepilogo Risposte</h3>
             
             <div class="relative h-8 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                @php
-                    $correctPercentage = ($statistics['correct'] / $statistics['total_questions']) * 100;
-                    $wrongPercentage = ($statistics['wrong'] / $statistics['total_questions']) * 100;
-                    $unansweredPercentage = ($statistics['unanswered'] / $statistics['total_questions']) * 100;
-                @endphp
-                
                 <div class="absolute top-0 left-0 h-full bg-green-500 transition-all duration-500" 
-                     style="width: {{ $correctPercentage }}%"></div>
+                     style="width: {{ $statistics['correct_percentage'] }}%"></div>
                      
                 <div class="absolute top-0 h-full bg-red-500 transition-all duration-500" 
-                     style="left: {{ $correctPercentage }}%; width: {{ $wrongPercentage }}%"></div>
+                     style="left: {{ $statistics['correct_percentage'] }}%; width: {{ $statistics['wrong_percentage'] }}%"></div>
                      
-                @if($unansweredPercentage > 0)
+                @if($statistics['unanswered_percentage'] > 0)
                     <div class="absolute top-0 h-full bg-gray-400 transition-all duration-500" 
-                         style="left: {{ $correctPercentage + $wrongPercentage }}%; width: {{ $unansweredPercentage }}%"></div>
+                         style="left: {{ $statistics['correct_percentage'] + $statistics['wrong_percentage'] }}%; width: {{ $statistics['unanswered_percentage'] }}%"></div>
                 @endif
             </div>
             
@@ -79,20 +72,20 @@
                 <div class="flex items-center space-x-2">
                     <div class="w-4 h-4 bg-green-500 rounded"></div>
                     <span class="text-sm text-gray-600 dark:text-gray-400">
-                        Corrette ({{ number_format($correctPercentage, 1) }}%)
+                        Corrette ({{ number_format($statistics['correct_percentage'], 1) }}%)
                     </span>
                 </div>
                 <div class="flex items-center space-x-2">
                     <div class="w-4 h-4 bg-red-500 rounded"></div>
                     <span class="text-sm text-gray-600 dark:text-gray-400">
-                        Errate ({{ number_format($wrongPercentage, 1) }}%)
+                        Errate ({{ number_format($statistics['wrong_percentage'], 1) }}%)
                     </span>
                 </div>
-                @if($unansweredPercentage > 0)
+                @if($statistics['unanswered_percentage'] > 0)
                     <div class="flex items-center space-x-2">
                         <div class="w-4 h-4 bg-gray-400 rounded"></div>
                         <span class="text-sm text-gray-600 dark:text-gray-400">
-                            Non risposte ({{ number_format($unansweredPercentage, 1) }}%)
+                            Non risposte ({{ number_format($statistics['unanswered_percentage'], 1) }}%)
                         </span>
                     </div>
                 @endif
@@ -100,12 +93,12 @@
         </div>
 
         {{-- Errori per Argomento --}}
-        @if($errorsByTopic->count() > 0)
+        @if(count($errorsByTopic) > 0)  {{-- CAMBIATO DA $errorsByTopic->count() --}}
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Errori per Argomento</h3>
                 
                 <div class="space-y-4">
-                    @foreach($errorsByTopic as $topicId => $topicData)
+                    @foreach($errorsByTopic as $topicData)
                         <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center space-x-3">
@@ -126,8 +119,7 @@
                             
                             <div class="space-y-2">
                                 @foreach($topicData['questions'] as $question)
-                                    <button wire:click="showQuestionDetail({{ $question['id'] }})"
-                                            class="w-full text-left p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                    <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                         <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
                                             {{ $question['text'] }}
                                         </p>
@@ -145,57 +137,43 @@
                                                 </span>
                                             </span>
                                         </div>
-                                    </button>
-                                    
-                                    {{-- Modal Dettaglio Domanda --}}
-                                    <x-filament::modal id="question-detail-{{ $question['id'] }}" width="3xl">
-                                        <x-slot name="heading">
-                                            Dettaglio Domanda
-                                        </x-slot>
                                         
-                                        <div class="space-y-4">
-                                            <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                <p class="text-gray-900 dark:text-white">
-                                                    {{ $question['text'] }}
-                                                </p>
-                                            </div>
+                                        @if($question['explanation'])
+                                            <button onclick="showExplanation('{{ $question['id'] }}')" 
+                                                    class="mt-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                                                Mostra spiegazione
+                                            </button>
                                             
-                                            <div class="grid grid-cols-2 gap-4">
-                                                <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                                    <p class="text-sm text-red-600 dark:text-red-400 font-medium mb-1">
-                                                        Tua risposta
-                                                    </p>
-                                                    <p class="text-red-900 dark:text-red-100 font-semibold">
-                                                        {{ $question['user_answer'] ? 'VERO' : 'FALSO' }}
-                                                    </p>
-                                                </div>
-                                                
-                                                <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                                                    <p class="text-sm text-green-600 dark:text-green-400 font-medium mb-1">
-                                                        Risposta corretta
-                                                    </p>
-                                                    <p class="text-green-900 dark:text-green-100 font-semibold">
-                                                        {{ $question['correct_answer'] ? 'VERO' : 'FALSO' }}
-                                                    </p>
-                                                </div>
+                                            <div id="explanation-{{ $question['id'] }}" class="hidden mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-800 dark:text-blue-200">
+                                                {{ $question['explanation'] }}
                                             </div>
-                                            
-                                            @if($question['explanation'])
-                                                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">
-                                                        Spiegazione
-                                                    </p>
-                                                    <p class="text-sm text-blue-900 dark:text-blue-100">
-                                                        {{ $question['explanation'] }}
-                                                    </p>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    </x-filament::modal>
+                                        @endif
+                                    </div>
                                 @endforeach
                             </div>
                         </div>
                     @endforeach
+                </div>
+            </div>
+        @endif
+
+        {{-- Info Quiz --}}
+        @if($quizSession->type === 'ministerial' && $quizSession->ministerialQuiz)
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-2xl p-6">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Dettagli Quiz</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Tipo:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ $this->getQuizTypeLabel() }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Nome:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ $quizSession->ministerialQuiz->name }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Errori massimi:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-white">{{ $statistics['max_errors'] }}</span>
+                    </div>
                 </div>
             </div>
         @endif
@@ -213,4 +191,13 @@
             </x-filament::button>
         </div>
     </div>
+
+    <script>
+        function showExplanation(questionId) {
+            const explanationDiv = document.getElementById('explanation-' + questionId);
+            if (explanationDiv) {
+                explanationDiv.classList.toggle('hidden');
+            }
+        }
+    </script>
 </x-filament-panels::page>

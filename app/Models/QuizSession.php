@@ -15,6 +15,7 @@ class QuizSession extends Model
         'user_id',
         'type',
         'topic_id',
+        'ministerial_quiz_id',
         'total_questions',
         'correct_answers',
         'wrong_answers',

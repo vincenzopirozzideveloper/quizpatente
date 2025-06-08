@@ -1,4 +1,5 @@
 <?php
+// app/Filament/Pages/Quiz/QuizSelection.php
 
 namespace App\Filament\Pages\Quiz;
 
@@ -6,6 +7,7 @@ use App\Models\Topic;
 use Filament\Pages\Page;
 use App\Models\UserError;
 use App\Services\QuizService;
+use App\Models\MinisterialQuiz;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Select;
@@ -20,16 +22,20 @@ class QuizSelection extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
     protected static ?string $navigationLabel = 'Quiz';
-    protected static ?string $title = 'Seleziona Quiz';
+    protected static ?string $title = 'Centro Quiz';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationGroup = 'Area Studio';
     protected static string $view = 'filament.pages.quiz.quiz-selection';
 
     public ?string $selectedTopic = null;
-    protected QuizService $quizService;
+    public int $errorsToReview = 0;
+    public array $quizStats = [];
+    public Collection $availableTopics;
     public array $ministerialProgress = [];
     public Collection $availableMinisterialQuizzes;
     public int $maxErrors = 3;
+
+    protected QuizService $quizService;
 
     public function boot()
     {
@@ -40,54 +46,19 @@ class QuizSelection extends Page implements HasForms
     {
         $this->loadQuizStats();
         $this->loadMinisterialQuizzes();
-    }
-    /**
-     * Mostra la lista dei quiz ministeriali
-     */
-    public function showMinisterialQuizList(): void
-    {
-        $this->dispatch('open-modal', id: 'ministerial-quiz-list');
+        $this->loadAvailableTopics();
+        $this->loadErrorsToReview();
     }
 
-    /**
-     * Avvia un quiz ministeriale specifico
-     */
-    public function startMinisterialQuiz(int $ministerialQuizId): void
+    protected function loadErrorsToReview(): void
     {
-        try {
-            $quiz = $this->quizService->generateMinisterialQuizSession(Auth::user(), $ministerialQuizId);
-            $this->redirect(route('filament.quizpatente.pages.quiz.play', ['session' => $quiz->id]));
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('Errore')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
-    }
-
-    protected function loadMinisterialQuizzes(): void
-    {
-        $this->availableMinisterialQuizzes = $this->quizService->getAvailableMinisterialQuizzes(Auth::user());
-        $this->ministerialProgress = $this->quizService->getMinisterialQuizzesProgress(Auth::user());
-
-        // Prendi il max_errors dal primo quiz disponibile
-        if ($this->availableMinisterialQuizzes->isNotEmpty()) {
-            $this->maxErrors = $this->availableMinisterialQuizzes->first()['max_errors'];
-        }
-    }
-
-    public function loadQuizStats(): void
-    {
-        $user = Auth::user();
-        $this->quizStats = $this->quizService->getQuizTypeStats($user);
-
-        // Conta errori da ripassare
-        $this->errorsToReview = UserError::where('user_id', $user->id)
+        $this->errorsToReview = UserError::where('user_id', Auth::id())
             ->notMastered()
             ->count();
+    }
 
-        // Carica topics disponibili
+    protected function loadAvailableTopics(): void
+    {
         $this->availableTopics = Topic::active()
             ->withCount([
                 'questions' => function ($query) {
@@ -99,38 +70,63 @@ class QuizSelection extends Page implements HasForms
             ->get();
     }
 
-    /**
-     * Avvia un quiz ministeriale con manuale
-     */
-    public function startMinisterialQuizWithManual(): void
+    protected function loadMinisterialQuizzes(): void
     {
-        $canGenerate = $this->quizService->canGenerateQuiz(QuizService::QUIZ_TYPE_MINISTERIAL_WITH_MANUAL);
+        $this->availableMinisterialQuizzes = $this->quizService->getAvailableMinisterialQuizzes(Auth::user());
+        $this->ministerialProgress = $this->quizService->getMinisterialQuizzesProgress(Auth::user());
 
-        if (!$canGenerate['can_generate']) {
-            Notification::make()
-                ->title('Impossibile creare il quiz')
-                ->body('Non ci sono abbastanza domande disponibili.')
-                ->danger()
-                ->send();
-            return;
+        if ($this->availableMinisterialQuizzes->isNotEmpty()) {
+            $this->maxErrors = $this->availableMinisterialQuizzes->first()['max_errors'];
         }
-
-        $quiz = $this->quizService->generateMinisterialQuiz(Auth::user(), true);
-
-        $this->redirect(route('filament.quizpatente.pages.quiz.play', ['session' => $quiz->id]));
     }
 
-    /**
-     * Mostra il modal per selezionare l'argomento
-     */
+    protected function loadQuizStats(): void
+    {
+        $user = Auth::user();
+        $this->quizStats = $this->quizService->getQuizTypeStats($user);
+    }
+
+    // Quiz Ministeriale Ufficiale
+    public function showMinisterialQuizList(): void
+    {
+        $this->dispatch('open-modal', id: 'ministerial-quiz-list');
+    }
+
+    public function startMinisterialQuiz(int $ministerialQuizId): void
+    {
+        try {
+            $quiz = $this->quizService->generateMinisterialQuizSession(Auth::user(), $ministerialQuizId);
+            $this->redirect(QuizPlay::getUrl(['session' => $quiz->id]));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Errore')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    // Quiz Ministeriale con Manuale
+    public function startMinisterialQuizWithManual(): void
+    {
+        try {
+            $quiz = $this->quizService->generateMinisterialQuizWithManual(Auth::user());
+            $this->redirect(QuizPlay::getUrl(['session' => $quiz->id]));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Errore')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    // Quiz per Argomento
     public function showTopicSelection(): void
     {
         $this->dispatch('open-modal', id: 'topic-selection');
     }
 
-    /**
-     * Avvia un quiz per argomento
-     */
     public function startTopicQuiz(): void
     {
         if (!$this->selectedTopic) {
@@ -142,36 +138,19 @@ class QuizSelection extends Page implements HasForms
             return;
         }
 
-        $canGenerate = $this->quizService->canGenerateQuiz(
-            QuizService::QUIZ_TYPE_TOPIC,
-            $this->selectedTopic
-        );
-
-        if (!$canGenerate['can_generate']) {
+        try {
+            $quiz = $this->quizService->generateTopicQuiz(Auth::user(), $this->selectedTopic, true);
+            $this->redirect(QuizPlay::getUrl(['session' => $quiz->id]));
+        } catch (\Exception $e) {
             Notification::make()
-                ->title('Impossibile creare il quiz')
-                ->body('Non ci sono abbastanza domande per questo argomento.')
+                ->title('Errore')
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
-            return;
         }
-
-        if ($canGenerate['message']) {
-            Notification::make()
-                ->title('Attenzione')
-                ->body($canGenerate['message'])
-                ->warning()
-                ->send();
-        }
-
-        $quiz = $this->quizService->generateTopicQuiz(Auth::user(), $this->selectedTopic);
-
-        $this->redirect(route('filament.quizpatente.pages.quiz.play', ['session' => $quiz->id]));
     }
 
-    /**
-     * Avvia un quiz di ripasso errori
-     */
+    // Quiz Ripasso Errori
     public function startErrorsReviewQuiz(): void
     {
         if ($this->errorsToReview === 0) {
@@ -183,24 +162,18 @@ class QuizSelection extends Page implements HasForms
             return;
         }
 
-        $canGenerate = $this->quizService->canGenerateQuiz(QuizService::QUIZ_TYPE_ERRORS_REVIEW);
-
-        if ($canGenerate['message']) {
+        try {
+            $quiz = $this->quizService->generateErrorsReviewQuiz(Auth::user());
+            $this->redirect(QuizPlay::getUrl(['session' => $quiz->id]));
+        } catch (\Exception $e) {
             Notification::make()
-                ->title('Attenzione')
-                ->body($canGenerate['message'])
-                ->warning()
+                ->title('Errore')
+                ->body($e->getMessage())
+                ->danger()
                 ->send();
         }
-
-        $quiz = $this->quizService->generateErrorsReviewQuiz(Auth::user());
-
-        $this->redirect(route('filament.quizpatente.pages.quiz.play', ['session' => $quiz->id]));
     }
 
-    /**
-     * Form per la selezione dell'argomento
-     */
     protected function getFormSchema(): array
     {
         return [
@@ -218,7 +191,7 @@ class QuizSelection extends Page implements HasForms
                         ->required()
                         ->searchable()
                         ->placeholder('Scegli un argomento...')
-                        ->helperText('Verranno selezionate 30 domande casuali da questo argomento'),
+                        ->helperText('Il quiz includerà domande casuali da questo argomento con accesso al manuale'),
                 ])
         ];
     }
